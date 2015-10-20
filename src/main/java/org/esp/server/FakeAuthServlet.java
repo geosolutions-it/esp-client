@@ -1,10 +1,9 @@
 package org.esp.server;
 
+import freemarker.template.Configuration;
 import it.jrc.auth.AuthServlet;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 import javax.persistence.EntityManagerFactory;
 import javax.servlet.ServletException;
@@ -19,17 +18,15 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 
-import freemarker.template.Configuration;
-
 @Singleton
 public class FakeAuthServlet extends AuthServlet {
 
     @Inject
     public FakeAuthServlet(OpenIdManager manager, 
             @Named("context_path") String contextPath,
-            
+            @Named("login_page_url") String loginPageUrl,
             Configuration templateConf, EntityManagerFactory emf) {
-        super(manager, contextPath, null, null, null, null, null, templateConf, emf);
+        super(manager, contextPath, "dummy", "dummy", "http://dummy.it", "http://dummy.it", loginPageUrl, templateConf, emf);
     }
 
     @Override
@@ -38,6 +35,7 @@ public class FakeAuthServlet extends AuthServlet {
 
 
             SecurityUtils.getSubject().login(new UsernamePasswordToken("willtemperley@gmail.com", ""));
+            //SecurityUtils.getSubject().login(new UsernamePasswordToken("jimimaes@gmail.com", ""));
             super.doGet(request, response);
 
     }

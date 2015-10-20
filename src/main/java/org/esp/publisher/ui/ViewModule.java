@@ -10,6 +10,7 @@ import org.vaadin.addons.guice.uiscope.UIScoped;
 
 import com.google.inject.multibindings.MapBinder;
 import com.vaadin.navigator.View;
+import com.vaadin.server.Page;
 
 /**
  * Binds views to their URLs which results in an injectable {@link Map} of
@@ -39,4 +40,11 @@ public class ViewModule extends AbstractViewModule {
     public static String getESILink(EcosystemServiceIndicator esi) {
         return PUBLISH + "/" +  esi.getId();
     }
+    
+    public static String getFullESILink(EcosystemServiceIndicator esi) {
+        String basePath = Page.getCurrent().getLocation().getScheme() + ":" +
+                Page.getCurrent().getLocation().getSchemeSpecificPart();
+        return basePath + getESILink(esi);
+    } 
+    
 }

@@ -8,6 +8,7 @@ import java.io.File;
 import java.util.Date;
 import java.util.Set;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -17,6 +18,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -472,6 +474,17 @@ public class EcosystemServiceIndicator implements HasRole {
         this.dateUpdated = dateUpdated;
     }
 
+    private Set<Message> messages;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy="ecosystemServiceIndicator")
+    public Set<Message> getMessages() {
+        return messages;
+    }
+
+    public void setMessages(Set<Message> messages) {
+        this.messages = messages;
+    }
+    
     private File file;
     
     @Transient

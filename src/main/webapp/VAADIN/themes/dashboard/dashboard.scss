@@ -703,5 +703,11 @@ $esp-green: rgb(149,204,77);
         vertical-align: middle;
         line-height: 30px;
     }
+    
+    /* Message window */
+    .v-window-messagewindow .v-window-outerheader {
+      background-color: rgb(230, 231, 232);
+      height: 2.4em
+    }
 
 }
