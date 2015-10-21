@@ -38,9 +38,18 @@ public class MessageEditorController extends EditorController<Message> {
 
     private MessageEditorView messageEditorView;
 
+    private enum WINDOW_TYPE {
+        DIRECT, FEEDBACK, SHOW;
+    };
+
+    private WINDOW_TYPE windowType;
+
+    private RoleManager roleManager;
+
     @Inject
     public MessageEditorController(Dao dao, RoleManager roleManager, MailService mailService) {
         super(Message.class, dao);
+        this.roleManager = roleManager;
         this.mailService = mailService;
         TextArea textField = ff.addTextArea(Message_.text);
         textField.setCaption(null);
@@ -94,8 +103,15 @@ public class MessageEditorController extends EditorController<Message> {
         super.doPostCommit(entity);
 
         try {
-            mailService.sendBackEmail(entity);
-            Notification.show("Message sent to user", Notification.Type.WARNING_MESSAGE);
+            if (windowType == WINDOW_TYPE.DIRECT) {
+                mailService.sendEmailMessage(entity, roleManager.getRole(), entity
+                        .getEcosystemServiceIndicator().getRole());
+            }
+            if (windowType == WINDOW_TYPE.FEEDBACK) {
+                mailService.sendEmailMessage(entity, roleManager.getRole(), entity.getParent()
+                        .getAuthor());
+            }
+            Notification.show("Message sent", Notification.Type.WARNING_MESSAGE);
         } catch (Exception e) {
             Notification.show("Message added to board, but email fails",
                     Notification.Type.ERROR_MESSAGE);
@@ -114,7 +130,17 @@ public class MessageEditorController extends EditorController<Message> {
         this.window = window;
     }
 
+    public void isDirect() {
+        windowType = WINDOW_TYPE.DIRECT;
+        messageEditorView.getSendPanel().setVisible(true);
+        messageEditorView.getMainPanel().setVisible(true);
+        messageEditorView.getInfoPanel().setVisible(false);
+    }
+
     public void isFeedback() {
+        windowType = WINDOW_TYPE.FEEDBACK;
+        messageEditorView.getSendPanel().setVisible(true);
+        messageEditorView.getMainPanel().setVisible(true);
         messageEditorView.getInfoPanel().setVisible(true);
         HtmlLabel receivedMessage = new HtmlLabel();
         StringBuilder sb = new StringBuilder();
@@ -127,12 +153,14 @@ public class MessageEditorController extends EditorController<Message> {
         sb.append(getEntity().getParent().getText());
         sb.append("</p>");
         receivedMessage.setValue(sb.toString());
+        messageEditorView.getInfoPanel().removeAllComponents();
         messageEditorView.getInfoPanel().addComponent(receivedMessage);
     }
-    
-    public void isFeedbackShow() {
-        messageEditorView.removeComponent(messageEditorView.getSendPanel());
-        messageEditorView.removeComponent(messageEditorView.getMainPanel());
+
+    public void isMessageShow() {
+        windowType = WINDOW_TYPE.SHOW;
+        messageEditorView.getSendPanel().setVisible(false);
+        messageEditorView.getMainPanel().setVisible(false);
         messageEditorView.getInfoPanel().setVisible(true);
         HtmlLabel receivedMessage = new HtmlLabel();
         StringBuilder sb = new StringBuilder();
@@ -149,6 +177,7 @@ public class MessageEditorController extends EditorController<Message> {
         sb.append(getEntity().getParent().getText());
         sb.append("</p>");
         receivedMessage.setValue(sb.toString());
+        messageEditorView.getInfoPanel().removeAllComponents();
         messageEditorView.getInfoPanel().addComponent(receivedMessage);
     }
 

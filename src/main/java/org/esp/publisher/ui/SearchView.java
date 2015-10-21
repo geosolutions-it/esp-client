@@ -99,7 +99,9 @@ public class SearchView extends TwinPanelView implements View {
         this.modalMessageWindow.addCloseListener(new Window.CloseListener() {
             @Override
             public void windowClose(CloseEvent e) {
-                entitySelected(selectedEntity.getId());
+                table.refreshRowCache();
+                table.refresh();
+                entitySelected(selectedEntity.getId());                
             }
         });
         this.validated = dao.getEntityManager().find(Status.class,

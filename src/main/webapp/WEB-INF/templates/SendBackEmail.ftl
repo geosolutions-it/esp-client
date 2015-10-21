@@ -13,7 +13,7 @@
         </tr>
         <#if ORIGINAL??>
         <tr>
-            <td>In response to your message:</td> <i>${ORIGINAL}</i></td>
+            <td>In response to your message:</td>
         </tr>
         <tr>
             <td><i>${ORIGINAL}</i></td>
@@ -26,7 +26,7 @@
                         <td>Hi ${TO},</td>
                     </tr>
                     <tr>
-                        <td>you have new message from ${MANAGER} about <a href="#!${ESI_LINK}">${ESI_NAME}</a></td>
+                        <td>you have new message from ${FROM} about <a href="#!${ESI_LINK}">${ESI_NAME}</a></td>
                     </tr>
                     <tr>
                         <td style="padding: 20px 0 0px 0;">Message:</td>

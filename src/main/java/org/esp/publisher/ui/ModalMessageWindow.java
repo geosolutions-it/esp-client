@@ -44,6 +44,7 @@ public class ModalMessageWindow extends Window {
         Message message = messageEditorController.getEntity();
         message.setAuthor(this.roleManager.getRole());
         message.setEcosystemServiceIndicator(selectedEntity);
+        messageEditorController.isDirect();
     }
     
     public void feedbackMessage(Message message) {
@@ -63,7 +64,7 @@ public class ModalMessageWindow extends Window {
         setHeight("300px");
         setWidth("400px");
         messageEditorController.doUpdate(message);
-        messageEditorController.isFeedbackShow();
+        messageEditorController.isMessageShow();
     }
 
     @Override

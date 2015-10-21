@@ -1,5 +1,7 @@
 package org.esp.server;
 
+import it.jrc.domain.auth.Role;
+
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -75,15 +77,15 @@ public class MailService {
         email.send();
     }
 
-    public void sendBackEmail(Message message) throws EmailException, IOException,
+    public void sendEmailMessage(Message message, Role from , Role to) throws EmailException, IOException,
             TemplateException {
 
         EcosystemServiceIndicator esi = message.getEcosystemServiceIndicator();
         Template template = this.freeMarker.getTemplate("SendBackEmail.ftl");
         Map<String, String> rootMap = new HashMap<String, String>();
         rootMap.put("SUBJECT", BACK_SUBJECT);
-        rootMap.put("TO", esi.getRole().getFirstName() + " " + esi.getRole().getLastName());
-        rootMap.put("MANAGER", message.getAuthor().getFirstName() + " " + message.getAuthor().getLastName()+ "( "+ message.getAuthor().getEmail()  +" )");
+        rootMap.put("TO", to.getFirstName() + " " + to.getLastName());
+        rootMap.put("FROM", from.getFirstName() + " " + from.getLastName()+ "( "+ from.getEmail()  +" )");
         rootMap.put("ESI_NAME", esi.toString());
         rootMap.put("ESI_LINK", ViewModule.getFullESILink(esi));
         if(message.getParent() != null){
@@ -92,7 +94,7 @@ public class MailService {
         rootMap.put("MESSAGE", message.getText());
         Writer out = new StringWriter();
         template.process(rootMap, out);
-        sendEmail(BACK_SUBJECT, out.toString(), esi.getRole().getEmail());
+        sendEmail(BACK_SUBJECT, out.toString(), to.getEmail());
     }
 
 }
