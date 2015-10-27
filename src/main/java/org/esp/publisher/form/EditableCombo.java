@@ -6,6 +6,10 @@ import it.jrc.form.controller.EditorController;
 import it.jrc.form.controller.EditorController.EditCompleteListener;
 import it.jrc.persist.Dao;
 
+import java.util.List;
+
+import javax.persistence.TypedQuery;
+
 import com.vaadin.data.Property;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.Window;
@@ -22,6 +26,10 @@ import com.vaadin.ui.Window;
 public class EditableCombo<T> extends EditableField<T> {
 
     public EditableCombo(final Class<T> clazz, Dao dao) {
+        this(clazz, dao, "");
+    }
+    
+    public EditableCombo(final Class<T> clazz, Dao dao, String query) {
         
         /*
          * The selection widget
@@ -43,7 +51,11 @@ public class EditableCombo<T> extends EditableField<T> {
 
         encapsulatedField.setImmediate(true);
 
-        populateCombo();
+        if(query!=null && !query.isEmpty()){
+            populateCombo(query);
+        }else{
+            populateCombo();
+        }
 
         encapsulatedField.addValueChangeListener(new Property.ValueChangeListener() {
 
@@ -86,5 +98,14 @@ public class EditableCombo<T> extends EditableField<T> {
 
             }
         });
+    }
+    
+    @Override
+    protected void populateCombo(String query) {
+        TypedQuery<T> jpaQuery = dao.getEntityManager().createQuery(query, clazz);
+        List<T> items = jpaQuery.getResultList();
+        for (T t : items) {
+            encapsulatedField.addItem(t);
+        }
     }
 }

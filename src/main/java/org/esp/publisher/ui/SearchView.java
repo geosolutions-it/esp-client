@@ -31,7 +31,9 @@ import com.vaadin.addon.jpacontainer.JPAContainerItem;
 import com.vaadin.data.Container.Filterable;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
+import com.vaadin.data.util.filter.And;
 import com.vaadin.data.util.filter.Compare.Equal;
+import com.vaadin.data.util.filter.Not;
 import com.vaadin.data.util.filter.Or;
 import com.vaadin.event.LayoutEvents;
 import com.vaadin.event.LayoutEvents.LayoutClickEvent;
@@ -265,8 +267,10 @@ public class SearchView extends TwinPanelView implements View {
                 addPublishFilter(esiContainer);
             }
         };
-        fp.addFilterField(EcosystemServiceIndicator_.ecosystemService);
-        fp.addFilterField(EcosystemServiceIndicator_.study);
+        
+        fp.addFilterField(EcosystemServiceIndicator_.ecosystemService, "SELECT es FROM EcosystemService es WHERE es.id > 0");
+        
+        fp.addFilterField(EcosystemServiceIndicator_.study, "SELECT st FROM Study st WHERE st.id > 0");
         return fp;
 
     }
@@ -466,10 +470,26 @@ public class SearchView extends TwinPanelView implements View {
     }
 
     protected void addPublishFilter(Filterable toFilter) {
+        /*
+         * Generic user see: 
+         * - own not temporary (validated or not)
+         * - all validated
+         */
         if (!roleManager.getRole().getIsSuperUser()) {
-            toFilter.addContainerFilter(new Or(new Equal(EcosystemServiceIndicator_.status
-                    .getName(), PublishStatus.VALIDATED.getValue()), new Equal(
-                    EcosystemServiceIndicator_.role.getName(), roleManager.getRole())));
+            toFilter.addContainerFilter(
+                    new Or(
+                            new And(
+                                    new Not(new Equal(EcosystemServiceIndicator_.status.getName(), PublishStatus.TEMPORARY.getValue())), 
+                                    new Equal(EcosystemServiceIndicator_.role.getName(), roleManager.getRole())),
+                            new Equal(EcosystemServiceIndicator_.status.getName(), PublishStatus.VALIDATED.getValue())
+                    )
+            );
+        /*
+         * Super user see: 
+         * - all not temporary 
+         */
+        }else{           
+            toFilter.addContainerFilter(new Not(new Equal(EcosystemServiceIndicator_.status.getName(), PublishStatus.TEMPORARY.getValue())));
         }
     }
 

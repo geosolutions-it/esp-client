@@ -192,9 +192,9 @@ public class StylerFieldGroup extends FieldGroup<EcosystemServiceIndicator> impl
         INVALID_COLOR_MAP.setLabel(INVALID_ITEM);
     }
 
-    public StylerFieldGroup(Dao dao) {
+    public StylerFieldGroup(String name, Dao dao) {
         super(new BeanFieldGroup<EcosystemServiceIndicator>(EcosystemServiceIndicator.class),
-                "Lay-out", null);
+                name, null);
 
         List<ColourMap> cms = dao.all(ColourMap.class);
         defaultColorMap = cms.get(0);

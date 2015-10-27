@@ -67,6 +67,8 @@ public abstract class EditableField<T> extends CustomField<T> {
             encapsulatedField.addItem(t);
         }
     }
+    
+    protected abstract void populateCombo(String query);
 
     @Override
     public void setPropertyDataSource(@SuppressWarnings("rawtypes") Property newDataSource) {

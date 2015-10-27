@@ -68,7 +68,11 @@ public class ESPClientUploadField extends UploadField {
 
     public void updateSpatialDataType(SpatialDataType spatialDataType) {
         this.spatialDataType = spatialDataType;
-        setCaption(String.format(UPLOAD_MESSAGE, getLabel(spatialDataType.getId()), getLimit(spatialDataType.getId())));
+        if(spatialDataType != null){
+            setCaption(String.format(UPLOAD_MESSAGE, getLabel(spatialDataType.getId()), getLimit(spatialDataType.getId())));
+        }else{
+            setCaption("");
+        }        
     }
 
     private String getLimit(long spatialDataType) {

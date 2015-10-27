@@ -5,8 +5,9 @@ package org.esp.domain.blueprint;
  */
 
 public enum PublishStatus {
-    VALIDATED(1l),
-    NOT_VALIDATED(2l);
+    VALIDATED(1l), 
+    NOT_VALIDATED(2l),
+    TEMPORARY(3l);
 
     private final Long value;
 
