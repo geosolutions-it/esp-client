@@ -21,6 +21,9 @@ import org.esp.domain.blueprint.PublishStatus;
 import org.esp.domain.blueprint.Status;
 import org.esp.publisher.GeoserverRestApi;
 import org.esp.publisher.LayerManager;
+import org.esp.server.MailService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.vaadin.addon.leaflet.LMap;
 
 import com.google.inject.Inject;
@@ -47,6 +50,7 @@ import com.vaadin.ui.CheckBox;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
+import com.vaadin.ui.Notification;
 import com.vaadin.ui.Table;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
@@ -89,14 +93,19 @@ public class SearchView extends TwinPanelView implements View {
 
     private ModalMessageWindow modalMessageWindow;
 
+    private MailService mailService;
+
+    private Logger logger = LoggerFactory.getLogger(SearchView.class);
+    
     @Inject
-    public SearchView(Dao dao, RoleManager roleManager, 
+    public SearchView(Dao dao, RoleManager roleManager_, MailService mailService_, 
 			final ModalMessageWindow modalMessageWindow,
             @Named("gs_wms_url") String defaultWms,
             GeoserverRestApi gsr) {
 
         ContainerManager<EcosystemServiceIndicator> containerManager = new ContainerManager<EcosystemServiceIndicator>(
                 dao, EcosystemServiceIndicator.class);
+        this.mailService = mailService_;
         this.modalMessageWindow = modalMessageWindow;
         this.modalMessageWindow.addCloseListener(new Window.CloseListener() {
             @Override
@@ -117,7 +126,7 @@ public class SearchView extends TwinPanelView implements View {
                 new boolean[] { false });
         this.dao = dao;
         this.layerManager = new LayerManager(new LMap(), defaultWms);
-        this.roleManager = roleManager;
+        this.roleManager = roleManager_;
         addPublishFilter(esiContainer);
         {
             SimplePanel leftPanel = getLeftPanel();
@@ -158,6 +167,17 @@ public class SearchView extends TwinPanelView implements View {
                             JPAContainerItem<?> item = i.next();
                             item.getItemProperty(EcosystemServiceIndicator_.status.getName())
                                     .setValue(validated);
+                            /*
+                             * Send mail to users
+                             */
+                            EcosystemServiceIndicator esi = (EcosystemServiceIndicator) item.getEntity();
+                            try {
+                                mailService.sendPublishedEmailMessage(esi, roleManager.getRole(), esi.getRole());
+                            } catch (Exception e) {
+                                logger.error(e.getMessage(),e);
+                                Notification.show("Publish problem: unable to send email to : " + esi.getRole().getEmail() + "\n for " + esi.toString(),
+                                        Notification.Type.ERROR_MESSAGE);
+                            }
                         }
                         esiContainer.refresh();
                         resetChecked();

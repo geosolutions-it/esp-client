@@ -12,6 +12,7 @@ import it.geosolutions.geoserver.rest.decoder.RESTFeatureType.Attribute;
 import it.geosolutions.geoserver.rest.decoder.RESTLayer;
 import it.geosolutions.geoserver.rest.encoder.GSLayerEncoder;
 import it.geosolutions.geoserver.rest.encoder.GSResourceEncoder.ProjectionPolicy;
+import it.geosolutions.geoserver.rest.encoder.feature.GSFeatureTypeEncoder;
 import it.jrc.persist.Dao;
 
 import java.io.File;
@@ -164,7 +165,17 @@ public class GeoserverRestApi {
         try {
             if(shapefileToPostgis) {
                 importer.importShapefile(zipFile, layerAndStoreName, srs);
-                return publisher.publishDBLayer(workspace, postgisStoreName, layerAndStoreName, srs, styleName);
+                GSFeatureTypeEncoder fte = new GSFeatureTypeEncoder();
+                fte.setName(layerAndStoreName);
+                fte.setTitle(layerAndStoreName);
+                fte.setNativeCRS(srs);
+                fte.setSRS(srs);
+                fte.setEnabled(true);
+                GSLayerEncoder layerEncoder = new GSLayerEncoder();
+                layerEncoder.setEnabled(true);
+                layerEncoder.setQueryable(true);
+                layerEncoder.setDefaultStyle(styleName);
+                return publisher.publishDBLayer( workspace, postgisStoreName, fte, layerEncoder);
             } else {
                 return publisher.publishShp(workspace, layerAndStoreName,
                     layerAndStoreName, zipFile, srs, styleName);

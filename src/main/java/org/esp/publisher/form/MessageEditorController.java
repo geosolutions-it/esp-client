@@ -104,11 +104,11 @@ public class MessageEditorController extends EditorController<Message> {
 
         try {
             if (windowType == WINDOW_TYPE.DIRECT) {
-                mailService.sendEmailMessage(entity, roleManager.getRole(), entity
+                mailService.sendBackEmailMessage(entity, roleManager.getRole(), entity
                         .getEcosystemServiceIndicator().getRole());
             }
             if (windowType == WINDOW_TYPE.FEEDBACK) {
-                mailService.sendEmailMessage(entity, roleManager.getRole(), entity.getParent()
+                mailService.sendBackEmailMessage(entity, roleManager.getRole(), entity.getParent()
                         .getAuthor());
             }
             Notification.show("Message sent", Notification.Type.WARNING_MESSAGE);

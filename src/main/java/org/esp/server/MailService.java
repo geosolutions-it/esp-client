@@ -25,6 +25,7 @@ import freemarker.template.TemplateException;
 public class MailService {
 
     private String BACK_SUBJECT = "ESP-MAPPING : Send back for corrections";
+    private String PUBLISH_SUBJECT = "ESP-MAPPING : Your map has been published";
 
     private String hostName;
 
@@ -56,7 +57,6 @@ public class MailService {
         this.fromName = fromName;
         this.freeMarker = freeMarker;
         this.useSSL = useSSL;
-        //this.freeMarker.setClassForTemplateLoading(this.getClass(), "/");
     }
 
     public void sendEmail(String subject, String message, String to) throws EmailException,
@@ -77,7 +77,7 @@ public class MailService {
         email.send();
     }
 
-    public void sendEmailMessage(Message message, Role from , Role to) throws EmailException, IOException,
+    public void sendBackEmailMessage(Message message, Role from , Role to) throws EmailException, IOException,
             TemplateException {
 
         EcosystemServiceIndicator esi = message.getEcosystemServiceIndicator();
@@ -96,5 +96,22 @@ public class MailService {
         template.process(rootMap, out);
         sendEmail(BACK_SUBJECT, out.toString(), to.getEmail());
     }
+    
+    public void sendPublishedEmailMessage(EcosystemServiceIndicator esi, Role from , Role to) throws EmailException, IOException,
+    TemplateException {
+        Template template = this.freeMarker.getTemplate("SendBackEmail.ftl");
+        Map<String, String> rootMap = new HashMap<String, String>();
+        rootMap.put("SUBJECT", PUBLISH_SUBJECT);
+        rootMap.put("TO", to.getFirstName() + " " + to.getLastName());
+        rootMap.put("FROM", from.getFirstName() + " " + from.getLastName()+ "( "+ from.getEmail()  +" )");
+        rootMap.put("ESI_NAME", esi.toString());
+        rootMap.put("ESI_LINK", ViewModule.getFullESILink(esi));   
+        rootMap.put("MESSAGE", "Your map has been published");
+        Writer out = new StringWriter();
+        template.process(rootMap, out);
+        sendEmail(PUBLISH_SUBJECT, out.toString(), to.getEmail());
+    }
+    
+    
 
 }
