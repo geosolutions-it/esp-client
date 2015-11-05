@@ -158,64 +158,7 @@ public class SearchView extends TwinPanelView implements View {
                 HorizontalLayout buttonBar = new HorizontalLayout();
                 buttonBar.setSpacing(true);
                 buttonBar.setHeight("50px");
-                pb = new Button("Publish");
-                pb.setEnabled(false);
-                pb.addClickListener(new Button.ClickListener() {
-                    public void buttonClick(ClickEvent event) {
-                        Iterator<JPAContainerItem<?>> i = checkedItems.iterator();
-                        while (i.hasNext()) {
-                            JPAContainerItem<?> item = i.next();
-                            item.getItemProperty(EcosystemServiceIndicator_.status.getName())
-                                    .setValue(validated);
-                            /*
-                             * Send mail to users
-                             */
-                            EcosystemServiceIndicator esi = (EcosystemServiceIndicator) item.getEntity();
-                            try {
-                                mailService.sendPublishedEmailMessage(esi, roleManager.getRole(), esi.getRole());
-                            } catch (Exception e) {
-                                logger.error(e.getMessage(),e);
-                                Notification.show("Publish problem: unable to send email to : " + esi.getRole().getEmail() + "\n for " + esi.toString(),
-                                        Notification.Type.ERROR_MESSAGE);
-                            }
-                        }
-                        esiContainer.refresh();
-                        resetChecked();
-                    }
-                });
-                buttonBar.addComponent(pb);
-                buttonBar.setComponentAlignment(pb, Alignment.MIDDLE_CENTER);
-                sb = new Button("Send back");
-                sb.setEnabled(false);
-                sb.addClickListener(new Button.ClickListener() {
-                    public void buttonClick(ClickEvent event) {
-                        if (selectedEntity != null) {
-                            modalMessageWindow.createMessage(selectedEntity);
-                            UI.getCurrent().addWindow(modalMessageWindow);
-                            modalMessageWindow.focus();
-                        }
-                    }
-                });
-                buttonBar.addComponent(sb);
-                buttonBar.setComponentAlignment(sb, Alignment.MIDDLE_CENTER);
-                content.addComponent(buttonBar);
-            }
-
-            /*
-             * Table
-             */
-
-            content.addComponent(ecosystemServiceIndicatorTable);
-
-            content.setExpandRatio(ecosystemServiceIndicatorTable, 1);
-
-            /*
-             * Bottom button bar
-             */
-            if (roleManager.getRole().getIsSuperUser()) {
-                HorizontalLayout buttonBar = new HorizontalLayout();
-                buttonBar.setSpacing(true);
-                buttonBar.setHeight("50px");
+                
                 Button sa = new Button("Select all");
                 sa.addClickListener(new Button.ClickListener() {
                     public void buttonClick(ClickEvent event) {
@@ -248,6 +191,65 @@ public class SearchView extends TwinPanelView implements View {
                 });
                 buttonBar.addComponent(da);
                 buttonBar.setComponentAlignment(da, Alignment.MIDDLE_CENTER);
+                
+                pb = new Button("Publish");
+                pb.setEnabled(false);
+                pb.addClickListener(new Button.ClickListener() {
+                    public void buttonClick(ClickEvent event) {
+                        Iterator<JPAContainerItem<?>> i = checkedItems.iterator();
+                        while (i.hasNext()) {
+                            JPAContainerItem<?> item = i.next();
+                            item.getItemProperty(EcosystemServiceIndicator_.status.getName())
+                                    .setValue(validated);
+                            /*
+                             * Send mail to users
+                             */
+                            EcosystemServiceIndicator esi = (EcosystemServiceIndicator) item.getEntity();
+                            try {
+                                mailService.sendPublishedEmailMessage(esi, roleManager.getRole(), esi.getRole());
+                            } catch (Exception e) {
+                                logger.error(e.getMessage(),e);
+                                Notification.show("Publish problem: unable to send email to : " + esi.getRole().getEmail() + "\n for " + esi.toString(),
+                                        Notification.Type.ERROR_MESSAGE);
+                            }
+                        }
+                        esiContainer.refresh();
+                        resetChecked();
+                    }
+                });
+                buttonBar.addComponent(pb);
+                buttonBar.setComponentAlignment(pb, Alignment.MIDDLE_CENTER);
+                content.addComponent(buttonBar);
+            }
+
+            /*
+             * Table
+             */
+
+            content.addComponent(ecosystemServiceIndicatorTable);
+
+            content.setExpandRatio(ecosystemServiceIndicatorTable, 1);
+
+            /*
+             * Bottom button bar
+             */
+            if (roleManager.getRole().getIsSuperUser()) {
+                HorizontalLayout buttonBar = new HorizontalLayout();
+                buttonBar.setSpacing(true);
+                buttonBar.setHeight("50px");
+                sb = new Button("Send back");
+                sb.setEnabled(false);
+                sb.addClickListener(new Button.ClickListener() {
+                    public void buttonClick(ClickEvent event) {
+                        if (selectedEntity != null) {
+                            modalMessageWindow.createMessage(selectedEntity);
+                            UI.getCurrent().addWindow(modalMessageWindow);
+                            modalMessageWindow.focus();
+                        }
+                    }
+                });
+                buttonBar.addComponent(sb);
+                buttonBar.setComponentAlignment(sb, Alignment.MIDDLE_CENTER);
                 content.addComponent(buttonBar);
             }
         }

@@ -869,6 +869,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
                 if(updateStyle(layerName, metadata)) {
                     updateUIStyle(layerName, null, null);
                     commitWithoutValidation("Style updated");
+                    firePublishEvent();
                 } else {
                  // TODO: rollback
                     throw new PublishException("Error updating style");
