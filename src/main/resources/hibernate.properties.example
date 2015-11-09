@@ -1,4 +1,0 @@
-hibernate.connection.url=jdbc:postgresql://<server>:5432/<dbname>
-hibernate.connection.username=<pw>
-hibernate.connection.password=<pw>
-hibernate.show_sql=false

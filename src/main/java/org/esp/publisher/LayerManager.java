@@ -6,6 +6,7 @@ import java.util.Map;
 import org.vaadin.addon.leaflet.LMap;
 import org.vaadin.addon.leaflet.LTileLayer;
 import org.vaadin.addon.leaflet.LWmsLayer;
+import org.vaadin.addon.leaflet.shared.Bounds;
 
 import com.vaadin.ui.Component;
 import com.vividsolutions.jts.geom.Polygon;
@@ -27,6 +28,8 @@ public class LayerManager {
     
     private String defaultWms;
     
+    private Bounds wolrd = new Bounds("-180,-90,180,90");
+    
     private static Map<String, Integer> timestamps = new HashMap<String, Integer>();
 
     public LayerManager(LMap map,
@@ -39,8 +42,9 @@ public class LayerManager {
         bl = new LTileLayer(
                 "http://{s}.tile.osm.org/{z}/{x}/{y}.png");
         bl.setAttributionString("&copy; <a href='http://osm.org/copyright'>OpenStreetMap</a> contributors");
-        map.addBaseLayer(bl, OSM);
-
+        map.addBaseLayer(bl, OSM);;
+        map.setMinZoom(2);
+        map.setMaxBounds(wolrd);
     }
 
     public void setSurfaceLayerName(String layerName, long timestamp) {
@@ -103,6 +107,12 @@ public class LayerManager {
     }
 
     public void reset() {
+        /*
+         * Hack to force map as already rendered 
+         */
+        map.beforeClientResponse(false);
+        map.setZoomLevel(2);
+        map.setCenter(0, 0);
         map.removeAllComponents();
         map.addBaseLayer(bl, OSM);
     }

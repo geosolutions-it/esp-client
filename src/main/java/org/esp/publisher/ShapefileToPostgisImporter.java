@@ -84,7 +84,7 @@ public class ShapefileToPostgisImporter {
      * @param srs
      * @throws PublishException
      */
-    public void importShapefile(File zipFile, String layerName, String srs) throws PublishException {
+    public void importShapefile(File zipFile, String layerName, String tableName, String srs) throws PublishException {
         
         File shapeFile = PublisherUtils.uncompress(zipFile);
         DataStore sourceDataStore = null;
@@ -109,7 +109,7 @@ public class ShapefileToPostgisImporter {
             // output
             destDataStore = createOutputDataStore();
             SimpleFeatureType schema = buildDestinationSchema(featureReader
-                    .getSchema(), layerName, srs);
+                    .getSchema(), tableName, srs);
 
             FeatureStore<SimpleFeatureType, SimpleFeature> featureWriter = createWriter(
                     destDataStore, schema, transaction);
@@ -138,6 +138,9 @@ public class ShapefileToPostgisImporter {
             transaction.commit();
             
         } catch (Exception ioe) {
+            if (logger.isErrorEnabled()) {
+                logger.error(ioe.getMessage(),ioe);
+            }
             try {
                 transaction.rollback();
             } catch (IOException e1) {

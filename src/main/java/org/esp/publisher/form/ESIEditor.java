@@ -14,6 +14,7 @@ import it.jrc.form.view.IEditorView;
 import it.jrc.persist.Dao;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -54,6 +55,7 @@ import org.esp.publisher.colours.ColourMapFieldGroup.ColourMapAttributeChangeLis
 import org.esp.publisher.styler.StylerFieldGroup;
 import org.esp.publisher.styler.StylerFieldGroup.StyleChangeListener;
 import org.esp.publisher.ui.ViewModule;
+import org.esp.server.FileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vaadin.addon.leaflet.LMap;
@@ -119,10 +121,12 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
     private Indicator dummyIndicator;
     private EcosystemService dummyEcosystemService;
     private Study dummyStudy;
+    private FileService fileService;
     
     @Inject
     public ESIEditor(Dao dao, RoleManager roleManager,
             GeoserverRestApi gsr,
+            FileService fileService,
             @Named("geotiff_limit_mb") int geotiffSizeLimit,
             @Named("shapefile_limit_mb") int shapefileSizeLimit,
             @Named("shapefile_limit_records") int shapefileRecordsLimit) {
@@ -133,6 +137,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
         dummyEcosystemService = dao.find(EcosystemService.class, 0l);
         dummyStudy = dao.find(Study.class, 0l);
         
+        this.fileService = fileService;
         this.gsr = gsr;
         SpatialDataPublishers.setGeoserverHandler(gsr);
         this.roleManager = roleManager;
@@ -689,6 +694,8 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
             showError("Error extracting  CRS: " + e.getMessage());
         } catch (PublishException e) {
             showError("Publishing error: " + e.getMessage());
+        } catch (IOException e) {
+            showError("Error creating uploaded file copy: " + e.getMessage());
         }
     }
     
@@ -700,8 +707,9 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
      * @param spatialDataType
      * @throws UnknownCRSException
      * @throws PublishException
+     * @throws IOException 
      */
-    private void publishFile(File f, String layerName, SpatialDataType spatialDataType) throws UnknownCRSException, PublishException {
+    private void publishFile(File f, String layerName, SpatialDataType spatialDataType) throws UnknownCRSException, PublishException, IOException {
         Long spatialDataTypeId = spatialDataType.getId();
         // we use a different publisher for each kind of data type
         // to take into account a different publishing workflow
@@ -730,6 +738,9 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
                 // publish the new layer
                 if(filePublisher.createLayer(layerName, styleName, metadata)) {
                     logger.info("Layer created: " + layerName);
+                    //Persist source file
+                    fileService.uploadFile(layerName,metadata.getFile(),spatialDataType);
+                    
                     // some data types require the layer to be published before
                     // we can create the final style for it
                     if(filePublisher.supportsAdHocStyling()) {
@@ -796,6 +807,8 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
             super.doPostDelete(entity);
         } catch (PublishException e) {
             showError("Error during delete: " + e.getMessage());
+        } catch (IOException e) {
+            showError("Error during delete uploaded file: " + e.getMessage());
         }
     }
 
@@ -804,9 +817,11 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
      * 
      * @param entity
      * @throws PublishException
+     * @throws IOException 
      */
-    private void unpublishEntity(EcosystemServiceIndicator entity) throws PublishException {
+    private void unpublishEntity(EcosystemServiceIndicator entity) throws PublishException, IOException {
         getFilePublisher(entity.getSpatialDataType().getId()).unpublish(entity.getLayerName());
+        fileService.deleteFile(entity.getLayerName());
     }
     
     private String generateLayerName() {

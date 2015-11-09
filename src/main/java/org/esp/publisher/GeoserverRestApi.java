@@ -50,6 +50,8 @@ public class GeoserverRestApi {
     
     private static Pattern searchAggregate = Pattern.compile("^.*<AggregationResults><.*?>([0-9.E\\-]+)</.*?></AggregationResults>.*$",java.util.regex.Pattern.DOTALL);
     
+    private static final String DB_LAYER_SUFFIX = "-DB";
+    
     String wpsUrl;
     
     String classifyUrl;
@@ -57,6 +59,9 @@ public class GeoserverRestApi {
     String describeLayerUrl;
     
     boolean shapefileToPostgis = false;
+    
+    boolean shapefileAndPostgis = false;
+    
     String postgisStoreName;
     
     private Logger logger = LoggerFactory.getLogger(GeoserverRestApi.class);
@@ -83,6 +88,7 @@ public class GeoserverRestApi {
             @Named("gs_password") String restPassword,
             @Named("gs_wps_url") String wpsUrl,
             @Named("shapefile_to_postgis") boolean shapefileToPostgis,
+            @Named("shapefile_and_postgis") boolean shapefileAndPostgis,
             @Named("postgis_store") String postgisStoreName,
             
             ShapefileToPostgisImporter importer,
@@ -107,6 +113,19 @@ public class GeoserverRestApi {
         this.workspace = workspace;
         
         this.shapefileToPostgis = shapefileToPostgis;
+        this.shapefileAndPostgis = shapefileAndPostgis;
+        /*
+         * Not all combinations are allow, some values are forced:
+         * shapefileAndPostgis = FALSE ; shapefileToPostgis = FALSE -> only SHP
+         * shapefileAndPostgis = FALSE ; shapefileToPostgis = TRUE -> only POSTGIS
+         * shapefileAndPostgis = TRUE ; shapefileToPostgis = FALSE-> NOT ALLOWD --> FORCED -> shapefileToPostgis = TRUE -> SHP and POSTGIS
+         * shapefileAndPostgis = TRUE ; shapefileToPostgis = TRUE-> SHP and POSTGIS
+         */
+        if(this.shapefileAndPostgis){
+            this.shapefileToPostgis = true;
+            logger.warn("Misconfigured parameters: shapefileToPostgis can't be FALSE when shapefileAndPostgis is TRUE --> shapefileToPostgis forced to TRUE");
+        }
+        
         this.postgisStoreName = postgisStoreName;
         
         httpClient.setUser(restUser);
@@ -163,29 +182,53 @@ public class GeoserverRestApi {
             String layerAndStoreName, String styleName) throws PublishException {
 
         try {
-            if(shapefileToPostgis) {
-                importer.importShapefile(zipFile, layerAndStoreName, srs);
-                GSFeatureTypeEncoder fte = new GSFeatureTypeEncoder();
-                fte.setName(layerAndStoreName);
-                fte.setTitle(layerAndStoreName);
-                fte.setNativeCRS(srs);
-                fte.setSRS(srs);
-                fte.setEnabled(true);
-                GSLayerEncoder layerEncoder = new GSLayerEncoder();
-                layerEncoder.setEnabled(true);
-                layerEncoder.setQueryable(true);
-                layerEncoder.setDefaultStyle(styleName);
-                return publisher.publishDBLayer( workspace, postgisStoreName, fte, layerEncoder);
+            boolean shpPublished = false;
+            boolean postgisPublished = false;
+            if (shapefileAndPostgis) {
+                shpPublished = publishPostgis(zipFile, srs, layerAndStoreName, styleName, true);
+                postgisPublished = publisher.publishShp(workspace, layerAndStoreName,
+                        layerAndStoreName, zipFile, srs, styleName);
             } else {
-                return publisher.publishShp(workspace, layerAndStoreName,
-                    layerAndStoreName, zipFile, srs, styleName);
+                if (shapefileToPostgis) {
+                    shpPublished = publishPostgis(zipFile, srs, layerAndStoreName, styleName, false);
+                    postgisPublished = true;
+                } else {
+                    postgisPublished = publisher.publishShp(workspace, layerAndStoreName,
+                            layerAndStoreName, zipFile, srs, styleName);
+                    shpPublished = true;
+                }
             }
+            return (shpPublished && postgisPublished);
         } catch (FileNotFoundException e) {
+            if (logger.isErrorEnabled()) {
+                logger.error(e.getMessage(),e);
+            }
             throw new PublishException("Shapefile not found: " + zipFile.getAbsolutePath(), e);
         } catch (IllegalArgumentException e) {
+            if (logger.isErrorEnabled()) {
+                logger.error(e.getMessage(),e);
+            }
             throw new PublishException("Shapefile not valid: " + zipFile.getAbsolutePath(), e);
         }
     }
+    
+    private boolean publishPostgis(File zipFile,String srs, String layerAndStoreName, String styleName, Boolean addLayerSuffix) throws PublishException{
+        String layerAndStoreNameMod = layerAndStoreName + (addLayerSuffix ? DB_LAYER_SUFFIX : "");
+        importer.importShapefile(zipFile, layerAndStoreName, layerAndStoreNameMod, srs);
+        GSFeatureTypeEncoder fte = new GSFeatureTypeEncoder();            
+        fte.setName(layerAndStoreNameMod);
+        fte.setTitle(layerAndStoreNameMod);
+        fte.setNativeCRS(srs);
+        fte.setSRS(srs);
+        fte.setEnabled(true);
+        GSLayerEncoder layerEncoder = new GSLayerEncoder();
+        layerEncoder.setEnabled(true);
+        layerEncoder.setQueryable(true);
+        layerEncoder.setDefaultStyle(styleName);
+        return publisher.publishDBLayer(workspace, postgisStoreName, fte, layerEncoder);
+    }
+    
+    
 
     
     /**
@@ -379,16 +422,35 @@ public class GeoserverRestApi {
     }
 
     public boolean removeShapefile(String layerName) throws PublishException {
-        boolean result = publisher.unpublishFeatureType(workspace, shapefileToPostgis ? postgisStoreName :  layerName, layerName);
-        if(result) {
+        boolean shpUnpublished = false;
+        boolean postgisUnpublished = false;
+        if(shapefileAndPostgis){
+            postgisUnpublished = publisher.unpublishFeatureType(workspace, postgisStoreName, layerName + DB_LAYER_SUFFIX);
+            shpUnpublished = publisher.unpublishFeatureType(workspace, layerName, layerName);
+        }else{
             if(shapefileToPostgis) {
-                importer.removeFeature(layerName);
+                postgisUnpublished = publisher.unpublishFeatureType(workspace, postgisStoreName, layerName); 
+                shpUnpublished = true;
+            }else{
+                shpUnpublished = publisher.unpublishFeatureType(workspace, layerName, layerName); 
+                postgisUnpublished = true;
             }
-            RESTDataStore dataStore = reader.getDatastore(workspace, layerName);
-            // for shapefiles we need to remove the datastore too
-            publisher.removeDatastore(workspace, layerName);
         }
-        return result;
+        if(shpUnpublished && postgisUnpublished) {
+            if(shapefileAndPostgis){
+                importer.removeFeature(layerName + DB_LAYER_SUFFIX);
+            }else{
+                if(shapefileToPostgis) {
+                    importer.removeFeature(layerName);
+                }
+            }
+            // We need to remove the SHP datastore too
+            RESTDataStore dataStore = reader.getDatastore(workspace, layerName); 
+            if(dataStore != null){
+                publisher.removeDatastore(workspace, layerName, true);
+            }
+        }
+        return (shpUnpublished && postgisUnpublished);
     }
 
     public boolean removeStyle(String styleName) {

@@ -1,3 +1,8 @@
+hibernate.connection.url=
+hibernate.connection.username=
+hibernate.connection.password=
+hibernate.temp.use_jdbc_metadata_defaults=
+hibernate.show_sql=
 login_servlet_path = /login
 productionMode = true
 pushmode = automatic
@@ -9,6 +14,7 @@ gs_user = <username>
 gs_password = <password>
 gs_workspace = <ws>
 build_date = <date>
+shapefile_and_postgis = false
 shapefile_to_postgis = false
 postgis_store = esp_store
 postgis_host = <host>
