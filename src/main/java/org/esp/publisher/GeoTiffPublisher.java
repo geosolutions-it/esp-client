@@ -115,7 +115,9 @@ public class GeoTiffPublisher extends AbstractFilePublisher {
         } catch (TransformException e) {
             throw new PublishException("Error transforming bbox to WGS84: " + e.getMessage(), e);
         } finally {
-            gtr.dispose();
+            if(gtr != null){
+                gtr.dispose();
+            }
         }
         return surface;
     }

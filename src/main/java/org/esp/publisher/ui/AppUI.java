@@ -3,7 +3,6 @@ package org.esp.publisher.ui;
 import it.jrc.inject.GuicedViewProvider;
 import it.jrc.persist.Dao;
 
-import org.esp.publisher.MapPublisher;
 import org.vaadin.addons.guice.ui.ScopedUI;
 
 import com.google.inject.Inject;
@@ -11,7 +10,6 @@ import com.vaadin.annotations.JavaScript;
 import com.vaadin.annotations.StyleSheet;
 import com.vaadin.annotations.Theme;
 import com.vaadin.navigator.Navigator;
-import com.vaadin.navigator.ViewChangeListener;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.ui.CssLayout;
 import com.vaadin.ui.VerticalLayout;
@@ -40,7 +38,7 @@ public class AppUI extends ScopedUI  {
 
 	private GuicedViewProvider viewProvider;
 
-    private HeaderView headerView;
+        private HeaderView headerView;
 
 	@Inject
 	public AppUI(Dao dao, GuicedViewProvider viewProvider, HeaderView headerView) {

@@ -177,6 +177,8 @@ public class ShapefilePublisher extends AbstractFilePublisher {
     private void configureAttribute(ShapefileMetadata metadata, ContentFeatureSource featureSource,
             String attributeName, Class<?> attributeType) throws IOException {
         metadata.setAttributeName(attributeName);
+        metadata.setMinVal(0d);
+        metadata.setMaxVal(1d);
         if(Number.class.isAssignableFrom(attributeType)) {
             Function min = ff.function("Collection_Min", ff.property(attributeName));
             Function max = ff.function("Collection_Max", ff.property(attributeName));
@@ -184,13 +186,14 @@ public class ShapefilePublisher extends AbstractFilePublisher {
             ContentFeatureCollection features = featureSource.getFeatures();
             
             Number value = (Number)min.evaluate( features );
-            metadata.setMinVal(value.doubleValue());
+            if(value != null){
+                metadata.setMinVal(value.doubleValue());
+            }
             
             value = (Number)max.evaluate( features );
-            metadata.setMaxVal(value.doubleValue());
-        } else {
-            metadata.setMinVal(0d);
-            metadata.setMaxVal(1d);
+            if(value != null){
+                metadata.setMaxVal(value.doubleValue());
+            }
         }
     }
 

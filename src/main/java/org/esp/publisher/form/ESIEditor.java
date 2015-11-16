@@ -738,8 +738,6 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
                 // publish the new layer
                 if(filePublisher.createLayer(layerName, styleName, metadata)) {
                     logger.info("Layer created: " + layerName);
-                    //Persist source file
-                    fileService.uploadFile(layerName,metadata.getFile(),spatialDataType);
                     
                     // some data types require the layer to be published before
                     // we can create the final style for it
@@ -754,6 +752,9 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
                     String symbolType = filePublisher.getGeometryType(layerName);
                     updateUIStyle(styleName, attributesInfo, symbolType);
                     commitWithoutValidation("File saved");
+                    //Persist source file
+                    fileService.uploadFile(getEntity().getId(),layerName,metadata.getFile(),spatialDataType);
+                    
                     firePublishEvent();
                 } else {
                     // TODO: rollback
@@ -821,7 +822,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
      */
     private void unpublishEntity(EcosystemServiceIndicator entity) throws PublishException, IOException {
         getFilePublisher(entity.getSpatialDataType().getId()).unpublish(entity.getLayerName());
-        fileService.deleteFile(entity.getLayerName());
+        fileService.deleteFile(entity.getId(),entity.getLayerName());
     }
     
     private String generateLayerName() {

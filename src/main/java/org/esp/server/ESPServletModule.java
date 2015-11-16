@@ -7,7 +7,6 @@ import it.jrc.auth.SecurityFilter;
 import it.jrc.inject.AbstractGuiceServletModule;
 
 import org.apache.shiro.realm.Realm;
-import org.vaadin.addons.guice.servlet.VGuiceApplicationServlet;
 
 import com.google.inject.name.Names;
 import com.google.inject.persist.PersistFilter;
@@ -44,7 +43,7 @@ public class ESPServletModule extends AbstractGuiceServletModule {
 
         filter("/*").through(SecurityFilter.class, getIni());
         
-        filter("/*").through(AuthFilter.class);
+        filterRegex("^((?!/getoriginal).)*$").through(AuthFilter.class);
         
         if (isInProductionMode()) {
             serve("/login").with(AuthServlet.class);
@@ -53,12 +52,12 @@ public class ESPServletModule extends AbstractGuiceServletModule {
         } else {
             serve("/login").with(FakeAuthServlet.class);
         }
-
+        
         /*
          * Main application servlet
          */
-        serve("/*").with(VGuiceApplicationServlet.class, getServletParams());
+        serve("/*").with(CustomServlet.class, getServletParams());
 
     }
-
+    
 }
