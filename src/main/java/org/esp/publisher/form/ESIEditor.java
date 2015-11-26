@@ -44,6 +44,7 @@ import org.esp.domain.blueprint.Study;
 import org.esp.domain.blueprint.TemporalUnit_;
 import org.esp.domain.publisher.ColourMap;
 import org.esp.publisher.ESPClientUploadField;
+import org.esp.publisher.GeoTiffMetadata;
 import org.esp.publisher.GeoserverRestApi;
 import org.esp.publisher.PublishException;
 import org.esp.publisher.PublishedFileMetadata;
@@ -730,6 +731,13 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
                 unpublishEntity(getEntity());
             }
             // create a basic style for the layer
+            if(metadata instanceof GeoTiffMetadata){
+                GeoTiffMetadata gtm = (GeoTiffMetadata) metadata;
+                getEntity().setPixelSizeX(gtm.getPixelSizeX());
+                getEntity().setPixelSizeY(gtm.getPixelSizeY());
+            }
+           
+            
             String styleName = filePublisher.createStyle(metadata, layerName,
                     filePublisher.getDefaultStyleTemplate(), stylerFieldGroup.getDefaultColourMap());
             

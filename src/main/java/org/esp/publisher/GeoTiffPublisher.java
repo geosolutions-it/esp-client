@@ -85,8 +85,8 @@ public class GeoTiffPublisher extends AbstractFilePublisher {
             int imageWidth = imageLayout.getWidth(null);
             int imageHeight = imageLayout.getHeight(null);
 
-            double pixelSizeX = e.getWidth() / imageWidth;
-            double pixelSizeY = e.getHeight() / imageHeight;
+            double pixelSizeX = surface.getEnvelope().getEnvelopeInternal().getWidth() / imageWidth;
+            double pixelSizeY = surface.getEnvelope().getEnvelopeInternal().getHeight() / imageHeight;
 
             surface.setPixelSizeX(pixelSizeX);
             surface.setPixelSizeY(pixelSizeY);
