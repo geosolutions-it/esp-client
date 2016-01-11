@@ -27,6 +27,7 @@ import javax.persistence.TypedQuery;
 import javax.persistence.metamodel.Attribute;
 import javax.persistence.metamodel.SingularAttribute;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.esp.domain.blueprint.ArealUnit_;
 import org.esp.domain.blueprint.DataSource;
@@ -759,11 +760,14 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
                     String attributesInfo = filePublisher.getAttributesInfo(layerName);
                     String symbolType = filePublisher.getGeometryType(layerName);
                     updateUIStyle(styleName, attributesInfo, symbolType);
+                    //Copy to temporary file
+                    File tmpFile =  File.createTempFile(f.getName(), ".tmp");
+                    FileUtils.copyFile(f, tmpFile);
                     commitWithoutValidation("File saved");
-                    //Persist source file
-                    fileService.uploadFile(getEntity().getId(),layerName,f,spatialDataType);
-                    
+                    // Persist source file
+                    fileService.uploadFile(getEntity().getId(), layerName, tmpFile, spatialDataType);
                     firePublishEvent();
+                    tmpFile.delete();
                 } else {
                     // TODO: rollback
                     throw new PublishException("Error publishing layer");
