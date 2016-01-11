@@ -43,7 +43,11 @@ public class FileService {
         String subfolder = getSubfolder(id,layerName,datatType);
         String fileName = layerName + "." + (datatType.getId() == 1 ? MediaType.TIFF.subtype() : MediaType.ZIP.subtype());
         String destination = FilenameUtils.concat(downloadFolder.getAbsolutePath() + "/" + subfolder, fileName);
-        FileUtils.copyFile(fileToUpload, new File(destination));
+        File file =  new File(destination);
+        file.setReadable(true, false);
+        file.setExecutable(true, false);
+        file.setWritable(true, false);
+        FileUtils.copyFile(fileToUpload, file);
     }
 
     public void deleteFile(Long id, String layerName) throws IOException {

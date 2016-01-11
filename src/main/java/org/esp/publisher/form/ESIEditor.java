@@ -761,7 +761,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
                     updateUIStyle(styleName, attributesInfo, symbolType);
                     commitWithoutValidation("File saved");
                     //Persist source file
-                    fileService.uploadFile(getEntity().getId(),layerName,metadata.getFile(),spatialDataType);
+                    fileService.uploadFile(getEntity().getId(),layerName,f,spatialDataType);
                     
                     firePublishEvent();
                 } else {
