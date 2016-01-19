@@ -33,3 +33,4 @@ mail_password=test
 mail_from=info@esp-mapping.net
 mail_fromname=ESP Mapping
 mailSSL=false
+download_folder=j:/develop/downloads

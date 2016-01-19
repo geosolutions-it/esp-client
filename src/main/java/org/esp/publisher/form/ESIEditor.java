@@ -35,6 +35,7 @@ import org.esp.domain.blueprint.DataSource_;
 import org.esp.domain.blueprint.EcosystemService;
 import org.esp.domain.blueprint.EcosystemServiceIndicator;
 import org.esp.domain.blueprint.EcosystemServiceIndicator_;
+import org.esp.domain.blueprint.EcosystemService_;
 import org.esp.domain.blueprint.Indicator;
 import org.esp.domain.blueprint.Indicator_;
 import org.esp.domain.blueprint.PublishStatus;
@@ -117,7 +118,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
     private ESPClientUploadField uploadField;
     
     private Map<Long, Map<String, Integer>> limits = new HashMap<Long, Map<String, Integer>>();
-    private EditableCombo<EcosystemService> ecosystemServiceField;
+    private Field<EcosystemService> ecosystemServiceField;
     private Field<Indicator> indicatorField;
     private EditableCombo<Study> studyField;
     private Indicator dummyIndicator;
@@ -289,8 +290,9 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
         /*
          * The service
          */
-        ecosystemServiceField = new EditableCombo<EcosystemService>(
-                EcosystemService.class, dao, "SELECT es FROM EcosystemService es WHERE es.id > 0");
+        ecosystemServiceField = getFieldWithoutPopup("SELECT es FROM EcosystemService es WHERE es > 0",
+                EcosystemServiceIndicator_.ecosystemService, EcosystemService_.label); 
+        		
 
         ff.addField(EcosystemServiceIndicator_.ecosystemService, ecosystemServiceField);
         /*
@@ -578,6 +580,16 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
                 init(new DefaultEditorView<X>());
             }
         });
+        
+        ff.addField(prop, c);
+        return c;
+    }
+    
+    public <X> Field<X> getFieldWithoutPopup(String query,
+            Attribute<? extends EcosystemServiceIndicator, X> prop,
+            final SingularAttribute<X, ?>... childProps) {
+
+        Field<X> c = new SimpleCombo<X>(prop.getJavaType(), dao, query);
         
         ff.addField(prop, c);
         return c;
