@@ -121,7 +121,7 @@ public class GeoserverRestApi {
          * shapefileAndPostgis = TRUE ; shapefileToPostgis = FALSE-> NOT ALLOWD --> FORCED -> shapefileToPostgis = TRUE -> SHP and POSTGIS
          * shapefileAndPostgis = TRUE ; shapefileToPostgis = TRUE-> SHP and POSTGIS
          */
-        if(this.shapefileAndPostgis){
+        if(this.shapefileAndPostgis && !this.shapefileToPostgis){
             this.shapefileToPostgis = true;
             logger.warn("Misconfigured parameters: shapefileToPostgis can't be FALSE when shapefileAndPostgis is TRUE --> shapefileToPostgis forced to TRUE");
         }
@@ -158,7 +158,7 @@ public class GeoserverRestApi {
         try {
             return publisher.publishGeoTIFF(workspace, layerAndStoreName,
                     layerAndStoreName, geotiff, srs, ProjectionPolicy.NONE,
-                    styleName, null);
+                    workspace + ":" + styleName, null);
         } catch (FileNotFoundException e) {
             throw new PublishException("File to publish not found", e);
         } catch (IllegalArgumentException e) {
@@ -187,14 +187,14 @@ public class GeoserverRestApi {
             if (shapefileAndPostgis) {
                 shpPublished = publishPostgis(zipFile, srs, layerAndStoreName, styleName, true);
                 postgisPublished = publisher.publishShp(workspace, layerAndStoreName,
-                        layerAndStoreName, zipFile, srs, styleName);
+                        layerAndStoreName, zipFile, srs, workspace + ":" + styleName);
             } else {
                 if (shapefileToPostgis) {
                     shpPublished = publishPostgis(zipFile, srs, layerAndStoreName, styleName, false);
                     postgisPublished = true;
                 } else {
                     postgisPublished = publisher.publishShp(workspace, layerAndStoreName,
-                            layerAndStoreName, zipFile, srs, styleName);
+                            layerAndStoreName, zipFile, srs, workspace + ":" + styleName);
                     shpPublished = true;
                 }
             }
@@ -224,7 +224,7 @@ public class GeoserverRestApi {
         GSLayerEncoder layerEncoder = new GSLayerEncoder();
         layerEncoder.setEnabled(true);
         layerEncoder.setQueryable(true);
-        layerEncoder.setDefaultStyle(styleName);
+        layerEncoder.setDefaultStyle(workspace, styleName);
         return publisher.publishDBLayer(workspace, postgisStoreName, fte, layerEncoder);
     }
     
@@ -312,7 +312,7 @@ public class GeoserverRestApi {
         String sldBody;
         try {
             sldBody = buildSLDBody(styleName, attributeName, templateName, cmes, rules);
-            return publisher.publishStyle(sldBody);
+            return publisher.publishStyleInWorkspace(workspace, sldBody);
         } catch (IOException e) {
             throw new PublishException("Error reading template ("+templateName+") for style " + styleName, e);
         } catch (TemplateException e) {
@@ -459,11 +459,11 @@ public class GeoserverRestApi {
         if (styleName == null) {
             return false;
         }
-        return publisher.removeStyle(styleName, true);
+        return publisher.removeStyleInWorkspace(workspace, styleName, true);
     }
 
     public String getStyle(String styleName) {
-        return reader.getSLD(styleName);
+        return reader.getSLD(workspace, styleName);
     }
 
     public boolean updateStyle(String styleName, String style) throws PublishException {
@@ -471,7 +471,7 @@ public class GeoserverRestApi {
         layer.setWmsPath("newpath");
         if(publisher.configureLayer(workspace, styleName, layer)) {
             logger.info("Configured " + styleName);
-            return publisher.updateStyle(style, styleName);
+            return publisher.updateStyleInWorkspace(workspace, style, styleName);
         } else {
             throw new PublishException("Error configuring style " + styleName);
         }

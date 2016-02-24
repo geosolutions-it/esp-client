@@ -18,7 +18,7 @@
         txt: {
           label: 'Enter your {username} for <b>{provider}</b>',
           username: 'username',
-          title: 'Select your OpenID provider',
+          title: 'Select your Authentication method',
           sign: 'Go'
         }
       });
@@ -34,7 +34,8 @@
       <#if authMessage??>
       	${authMessage}
       <#else>
-        Please authenticate using an OpenID provider.  If you are a first time user, your account will automatically be created, however will require activation before you can login.
+        Please authenticate using an OpenID provider or ECAS.  If you are a first time user, your account will automatically be created, however will require activation before you can login.
+        We suggest to use ECAS because the OpenID option will be removed in a near future.
       </#if>
         
     </div>

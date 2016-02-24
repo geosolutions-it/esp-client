@@ -2,6 +2,7 @@ package org.esp.server;
 
 import it.jrc.auth.AuthFilter;
 import it.jrc.auth.AuthServlet;
+import it.jrc.auth.FakeEcasFilter;
 import it.jrc.auth.JpaRealm;
 import it.jrc.auth.SecurityFilter;
 import it.jrc.inject.AbstractGuiceServletModule;
@@ -39,6 +40,9 @@ public class ESPServletModule extends AbstractGuiceServletModule {
         /*
          * Security and persistence filters
          */
+        
+        //filter("/*").through(FakeEcasFilter.class);
+        
         filter("/*").through(PersistFilter.class);
 
         filter("/*").through(SecurityFilter.class, getIni());
@@ -57,7 +61,6 @@ public class ESPServletModule extends AbstractGuiceServletModule {
          * Main application servlet
          */
         serve("/*").with(CustomServlet.class, getServletParams());
-
     }
     
 }

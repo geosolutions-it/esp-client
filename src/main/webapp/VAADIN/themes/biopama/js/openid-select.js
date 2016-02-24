@@ -9,7 +9,7 @@
       txt: {
         label: 'Enter your {provider} {username}',
         username: 'username',
-        title: 'Select your openID provider',
+        title: 'Select your Authentication method',
         sign: 'Sign-In'
       },
       /*
@@ -26,25 +26,11 @@
           big: true
         },
         {
-          name: 'Yahoo',
-          url: 'Yahoo',
-          type: 'oauth',
+          name: 'ECAS',
+          url: 'ECAS',
+          type: 'ecas',
           label: null,
           big: true
-        },    
-        {
-          name: 'MyOpenID',
-          url: 'http://{username}.myopenid.com/',
-          type: 'oauth',
-          big: true
-        },
-        {
-          name: 'StackExchange',
-          url: 'https://openid.stackexchange.com/',
-          type: 'oauth',
-          label: null,
-          big: true,
-          disabled: true
         }
       ],
       cookie_expires: 6 * 30, // in days.

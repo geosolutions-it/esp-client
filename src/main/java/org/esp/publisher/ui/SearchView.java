@@ -441,7 +441,10 @@ public class SearchView extends TwinPanelView implements View {
 
     @Override
     public void enter(ViewChangeEvent event) {
-        if (selectedEntity == null) {
+    	if(event.getParameters() != null && event.getParameters().equals("reset")) {
+    		entitySelected(null);
+    		layerManager.setSurfaceLayerName("", 0);
+    	} else if (selectedEntity == null) {
 
             Iterator<?> it = table.getItemIds().iterator();
             if (it.hasNext()) {
@@ -560,7 +563,9 @@ public class SearchView extends TwinPanelView implements View {
     }
 
     private void resetSelected() {
-        sb.setEnabled(false);
+    	if(sb != null) {
+    		sb.setEnabled(false);
+    	}
         selectedEntity = null;
     }
 

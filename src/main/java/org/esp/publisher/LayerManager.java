@@ -117,4 +117,12 @@ public class LayerManager {
         map.addBaseLayer(bl, OSM);
     }
 
+	public void removeOverlays() {
+		if(singleLayer != null) {
+			map.removeLayer(singleLayer);
+			map.zoomToContent();
+		}
+		singleLayer = null;
+	}
+
 }
