@@ -444,6 +444,7 @@ public class SearchView extends TwinPanelView implements View {
     	if(event.getParameters() != null && event.getParameters().equals("reset")) {
     		entitySelected(null);
     		layerManager.setSurfaceLayerName("", 0);
+    		mapLegend.setValue(null);
     	} else if (selectedEntity == null) {
 
             Iterator<?> it = table.getItemIds().iterator();

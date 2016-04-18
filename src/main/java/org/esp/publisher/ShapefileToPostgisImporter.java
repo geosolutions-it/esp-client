@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.FileUtils;
 import org.esp.publisher.utils.PublisherUtils;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataStoreFinder;
@@ -159,6 +160,16 @@ public class ShapefileToPostgisImporter {
             closeResource(sourceDataStore);
             closeResource(destDataStore);
             closeResource(transaction);
+            if(shapeFile != null && shapeFile.exists()) {
+            	File folder = shapeFile.getParentFile();
+            	try {
+					FileUtils.deleteDirectory(folder);
+				} catch (IOException e) {
+					if (logger.isErrorEnabled()) {
+		                logger.error(e.getMessage(),e);
+		            }
+				}
+            }
         }
     }
     

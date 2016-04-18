@@ -175,5 +175,13 @@ public class GeoTiffPublisher extends AbstractFilePublisher {
         }
     }
 
+
+
+	@Override
+	public void cleanMetadata(PublishedFileMetadata metadata) {
+		// TODO Auto-generated method stub
+		
+	}
+
     
 }

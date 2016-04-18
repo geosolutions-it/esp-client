@@ -82,7 +82,9 @@ public class MapPublisher extends TwinPanelView implements View {
             replaceComponent(rightPanel, tabSheet);
 
             ESIEditorView esiEditorView =  new ESIEditorView();
+            ESIEditorView esiEditorView2 =  new ESIEditorView();
             surfaceEditor.init(esiEditorView);
+            surfaceEditor.initTab2(esiEditorView2);
             surfaceEditor.addEditCompleteListener(new EditCompleteListener<EcosystemServiceIndicator>() {
                 @Override
                 public void onEditComplete(EcosystemServiceIndicator entity) {
@@ -91,6 +93,7 @@ public class MapPublisher extends TwinPanelView implements View {
             });
 
             tabSheet.addTab(esiEditorView, "Maps");
+            tabSheet.addTab(esiEditorView2, "INSPIRE");
         }
     }
 

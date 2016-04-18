@@ -176,6 +176,39 @@ public class Study {
     public void setContactDetails(String contactDetails) {
         this.contactDetails = contactDetails;
     }
+    
+    private String organization;
+
+    @Column(name = "organization")
+    public String getOrganizationName() {
+        return organization;
+    }
+
+    public void setOrganizationName(String organization) {
+        this.organization = organization;
+    }
+    
+    private String email;
+
+    @Column(name = "email")
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    
+    private String phone;
+
+    @Column(name = "phone")
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
     private String fundingSource;
 

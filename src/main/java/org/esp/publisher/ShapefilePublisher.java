@@ -388,4 +388,16 @@ public class ShapefilePublisher extends AbstractFilePublisher {
         }
         return symbolType;
     }
+
+
+
+	@Override
+	public void cleanMetadata(PublishedFileMetadata metadata) {
+		ShapefileMetadata shapefileMeta = (ShapefileMetadata)metadata;
+		if(shapefileMeta.getFile() != null && shapefileMeta.getFile().exists()) {
+			shapefileMeta.getFile().delete();
+			shapefileMeta.getFile().getParentFile().delete();
+		}
+		
+	}
 }

@@ -109,6 +109,18 @@ public class EcosystemServiceIndicator implements HasRole {
     public void setQuantificationUnit(QuantificationUnit quantificationUnit) {
         this.quantificationUnit = quantificationUnit;
     }
+    
+    private MappingUnit mappingUnit;
+    
+    @ManyToOne
+    @JoinColumn(name = "fk_mmu_uom")
+    public MappingUnit getMinimumMappingUnitUom() {
+    	return mappingUnit;
+    }
+    
+    public void setMinimumMappingUnitUom(MappingUnit mappingUnit) {
+    	this.mappingUnit = mappingUnit;
+    }
 
     private ArealUnit arealUnit;
 
@@ -507,7 +519,154 @@ public class EcosystemServiceIndicator implements HasRole {
         return 0;
     }
     
-    @Override
+    private String inspireTitle;
+
+    @Column(name = "inspire_title")
+    public String getInspireTitle() {
+        return inspireTitle;
+    }
+
+    public void setInspireTitle(String inspireTitle) {
+        this.inspireTitle = inspireTitle;
+    }
+    
+    private String inspireAbstract;
+
+    @Column(name = "inspire_abstract")
+    public String getInspireAbstract() {
+        return inspireAbstract;
+    }
+
+    public void setInspireAbstract(String inspireAbstract) {
+        this.inspireAbstract = inspireAbstract;
+    }
+    
+    private InspireTopicCategory inspireTopicCategory;
+
+    @ManyToOne
+    @JoinColumn(name = "inspire_topic_category")
+    public InspireTopicCategory getInspireTopicCategory() {
+        return inspireTopicCategory;
+    }
+
+    public void setInspireTopicCategory(InspireTopicCategory inspireTopicCategory) {
+        this.inspireTopicCategory = inspireTopicCategory;
+    }
+    
+    private InspireTheme inspireTheme;
+
+    @ManyToOne
+    @JoinColumn(name = "inspire_theme")
+    public InspireTheme getInspireTheme() {
+        return inspireTheme;
+    }
+
+    public void setInspireTheme(InspireTheme inspireTheme) {
+        this.inspireTheme = inspireTheme;
+    }
+    
+    private String inspireResourceConstraints;
+
+
+    @Column(name = "inspire_resource_constraints")
+    public String getInspireResourceConstraints() {
+        return inspireResourceConstraints;
+    }
+
+    public void setInspireResourceConstraints(String inspireResourceConstraints) {
+        this.inspireResourceConstraints = inspireResourceConstraints;
+    }
+    
+    private String inspireLanguage;
+
+    @Column(name = "inspire_language")
+    public String getInspireLanguage() {
+        return inspireLanguage;
+    }
+
+    public void setInspireLanguage(String inspireLanguage) {
+        this.inspireLanguage = inspireLanguage;
+    }
+    
+    private Integer inspireStartYear;
+
+    @Column(name = "inspire_start_year")
+    public Integer getInspireStartYear() {
+        return inspireStartYear;
+    }
+
+    public void setInspireStartYear(Integer inspireStartYear) {
+        this.inspireStartYear = inspireStartYear;
+    }
+    
+    private Integer inspireEndYear;
+
+    @Column(name = "inspire_end_year")
+    public Integer getInspireEndYear() {
+        return inspireEndYear;
+    }
+
+    public void setInspireEndYear(Integer inspireEndYear) {
+        this.inspireEndYear = inspireEndYear;
+    }
+    
+    private String inspireLineage;
+
+    @Column(name = "inspire_lineage")
+    public String getInspireLineage() {
+        return inspireLineage;
+    }
+
+    public void setInspireLineage(String inspireLineage) {
+        this.inspireLineage = inspireLineage;
+    }
+    
+    private String inspireOwnerName;
+    
+    private String inspireOwnerOrganization;
+    
+    private String inspireOwnerEmail;
+    
+    private String inspireOwnerSite;
+    
+    
+    @Column(name = "inspire_owner_name")
+    public String getInspireOwnerName() {
+		return inspireOwnerName;
+	}
+
+	public void setInspireOwnerName(String inspireOwnerName) {
+		this.inspireOwnerName = inspireOwnerName;
+	}
+
+	@Column(name = "inspire_owner_organization")
+	public String getInspireOwnerOrganization() {
+		return inspireOwnerOrganization;
+	}
+
+	public void setInspireOwnerOrganization(String inspireOwnerOrganization) {
+		this.inspireOwnerOrganization = inspireOwnerOrganization;
+	}
+
+	@Column(name = "inspire_owner_email")
+	public String getInspireOwnerEmail() {
+		return inspireOwnerEmail;
+	}
+
+	public void setInspireOwnerEmail(String inspireOwnerEmail) {
+		this.inspireOwnerEmail = inspireOwnerEmail;
+	}
+
+	@Column(name = "inspire_owner_site")
+	public String getInspireOwnerSite() {
+		return inspireOwnerSite;
+	}
+
+	public void setInspireOwnerSite(String inspireOwnerSite) {
+		this.inspireOwnerSite = inspireOwnerSite;
+	}
+
+	@Override
     public String toString() {
         return String.format("%s - %s", ecosystemService, indicator);
     }

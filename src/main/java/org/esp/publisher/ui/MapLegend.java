@@ -49,56 +49,63 @@ public class MapLegend extends CssLayout {
     }
 
     public void setValue(EcosystemServiceIndicator entity) {
-        header.setCaption(entity.getIndicator().getLabel());
-        legend.setVisible(false);
-        ColourMap colourMap = entity.getColourMap();
-        
-        if (entity.getSpatialDataType() != null && entity.getSpatialDataType().getId() == 2) {
-                //&& entity.getAttributeName() != null && entity.getAttributeName().equals("*")) {
-            ck.setVisible(false);
-            String layerName = entity.getLayerName();
-            if(layerName != null) {
-                legend.setVisible(true);
-                JSONObject json = new JSONObject();
-                try {
-                    
-                    String style = gsr.getStyle(layerName);
-                    json.accumulate("style", style);
-                    json.accumulate("layer", layerName);
-                    
-                    JavaScript.getCurrent().execute("ESPStyler.configureStyler("+json.toString()+")");
-                    JavaScript.getCurrent().execute("ESPStyler.showLegend()");
-                } catch (JSONException e) {
-                    throw new RuntimeException("Error configuring the advanced legend", e);
-                }
-            } else {
-                legend.setVisible(false);
-            }
-            
-        } else if (colourMap != null) {    
-            ck.setVisible(true);
-            List<ColourMapEntry> colourMapEntries = colourMap
-                    .getColourMapEntries();
-
-            if (colourMapEntries != null && colourMapEntries.size() == 2) {
-                Double minVal = entity.getMinVal();
-                if (minVal == null) {
-                    minVal = 0d;
-                }
-                colourMapEntries.get(0).setValue(minVal);
-                Double maxVal = entity.getMaxVal();
-                if (maxVal == null) {
-                    maxVal = 1d;
-                }
-                colourMapEntries.get(1).setValue(maxVal);
-                ck.setColours(colourMap.getColourMapEntries());
-            }
-        } else {
-            ck.setVisible(false);
-        }
-
-        label.setValue(getLink(entity.getStudy()));
-        label.setWidth("100%");
+    	if(entity == null) {
+    		header.setCaption("");
+    		legend.setVisible(false);
+    		ck.setVisible(false);
+    		label.setValue("");
+    	} else {
+	        header.setCaption(entity.getIndicator().getLabel());
+	        legend.setVisible(false);
+	        ColourMap colourMap = entity.getColourMap();
+	        
+	        if (entity.getSpatialDataType() != null && entity.getSpatialDataType().getId() == 2) {
+	                //&& entity.getAttributeName() != null && entity.getAttributeName().equals("*")) {
+	            ck.setVisible(false);
+	            String layerName = entity.getLayerName();
+	            if(layerName != null) {
+	                legend.setVisible(true);
+	                JSONObject json = new JSONObject();
+	                try {
+	                    
+	                    String style = gsr.getStyle(layerName);
+	                    json.accumulate("style", style);
+	                    json.accumulate("layer", layerName);
+	                    
+	                    JavaScript.getCurrent().execute("ESPStyler.configureStyler("+json.toString()+")");
+	                    JavaScript.getCurrent().execute("ESPStyler.showLegend()");
+	                } catch (JSONException e) {
+	                    throw new RuntimeException("Error configuring the advanced legend", e);
+	                }
+	            } else {
+	                legend.setVisible(false);
+	            }
+	            
+	        } else if (colourMap != null) {    
+	            ck.setVisible(true);
+	            List<ColourMapEntry> colourMapEntries = colourMap
+	                    .getColourMapEntries();
+	
+	            if (colourMapEntries != null && colourMapEntries.size() == 2) {
+	                Double minVal = entity.getMinVal();
+	                if (minVal == null) {
+	                    minVal = 0d;
+	                }
+	                colourMapEntries.get(0).setValue(minVal);
+	                Double maxVal = entity.getMaxVal();
+	                if (maxVal == null) {
+	                    maxVal = 1d;
+	                }
+	                colourMapEntries.get(1).setValue(maxVal);
+	                ck.setColours(colourMap.getColourMapEntries());
+	            }
+	        } else {
+	            ck.setVisible(false);
+	        }
+	
+	        label.setValue(getLink(entity.getStudy()));
+	        label.setWidth("100%");
+    	}
     }
 
     private String getLink(Study s) {

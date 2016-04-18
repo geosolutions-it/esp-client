@@ -31,6 +31,9 @@ public class InlineStudyEditor extends EditorController<Study> {
         ff.addField(Study_.projectType);
         ff.addTextArea(Study_.projectReferences);
         ff.addTextArea(Study_.contactDetails);
+        ff.addField(Study_.organizationName);
+        ff.addField(Study_.email);
+        ff.addField(Study_.phone);
         ff.addTextArea(Study_.fundingSource);
         ff.addTextArea(Study_.keywords);
         ff.addTextArea(Study_.mainInvestigators);

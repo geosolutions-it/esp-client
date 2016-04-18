@@ -175,4 +175,6 @@ public interface SpatialDataPublisher {
     public String classify(String layerName, String attributeName,
             String classificationMethod, int intervalsNumber, ColourMap colourMap)
             throws PublishException;
+
+	public void cleanMetadata(PublishedFileMetadata metadata);
 }
