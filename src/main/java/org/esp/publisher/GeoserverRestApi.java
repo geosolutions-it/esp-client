@@ -5,6 +5,7 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import it.geosolutions.geoserver.rest.GeoServerRESTPublisher;
 import it.geosolutions.geoserver.rest.GeoServerRESTReader;
+import it.geosolutions.geoserver.rest.decoder.RESTCoverage;
 import it.geosolutions.geoserver.rest.decoder.RESTCoverageStore;
 import it.geosolutions.geoserver.rest.decoder.RESTDataStore;
 import it.geosolutions.geoserver.rest.decoder.RESTFeatureType;
@@ -343,6 +344,14 @@ public class GeoserverRestApi {
         RESTLayer layer = reader.getLayer(layerName);
         if(layer != null) {
             return reader.getFeatureType(layer);
+        }
+        return null;
+    }
+    
+    public RESTCoverage getCoverageInfo(String layerName) {
+    	RESTLayer layer = reader.getLayer(layerName);
+        if(layer != null) {
+            return reader.getCoverage(layer);
         }
         return null;
     }

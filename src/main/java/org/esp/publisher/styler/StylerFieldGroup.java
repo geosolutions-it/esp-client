@@ -569,6 +569,20 @@ public class StylerFieldGroup extends FieldGroup<EcosystemServiceIndicator> impl
         getFieldGroup().bind(attributesField, EcosystemServiceIndicator_.attributeName.getName());
 
     }
+    
+    public void setRasterMode() {
+    	attributesField.setVisible(false);
+    	classificationMethodField.setVisible(false);
+    	intervalsNumberField.setVisible(false);
+    	advancedStylerConfig.setVisible(false);
+    }
+    
+    public void setVectorMode() {
+    	attributesField.setVisible(true);
+    	classificationMethodField.setVisible(true);
+    	intervalsNumberField.setVisible(true);
+    	advancedStylerConfig.setVisible(true);
+    }
 
     private void fireAttributeValueChanged() {
         if (initialized) {

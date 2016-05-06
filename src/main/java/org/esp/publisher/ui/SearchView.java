@@ -1,5 +1,14 @@
 package org.esp.publisher.ui;
 
+import it.geosolutions.geonetwork.GNClient;
+import it.geosolutions.geonetwork.exception.GNLibException;
+import it.geosolutions.geonetwork.exception.GNServerException;
+import it.geosolutions.geonetwork.util.GNInsertConfiguration;
+import it.geosolutions.geonetwork.util.GNPriv;
+import it.geosolutions.geonetwork.util.GNPrivConfiguration;
+import it.geosolutions.geoserver.rest.decoder.RESTBoundingBox;
+import it.geosolutions.geoserver.rest.decoder.RESTCoverage;
+import it.geosolutions.geoserver.rest.decoder.RESTFeatureType;
 import it.jrc.auth.RoleManager;
 import it.jrc.domain.auth.Role;
 import it.jrc.form.editor.EntityTable;
@@ -10,10 +19,21 @@ import it.jrc.persist.Dao;
 import it.jrc.ui.HtmlLabel;
 import it.jrc.ui.SimplePanel;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.esp.domain.blueprint.Biome;
 import org.esp.domain.blueprint.EcosystemServiceIndicator;
 import org.esp.domain.blueprint.EcosystemServiceIndicator_;
 import org.esp.domain.blueprint.Message;
@@ -94,19 +114,44 @@ public class SearchView extends TwinPanelView implements View {
     private ModalMessageWindow modalMessageWindow;
 
     private MailService mailService;
+    
+	private String geonetworkUrl;
+	private String geonetworkUser;
+	private String geonetworkPassword;
+	
+	private String baseUrl;
+	private String geoserverUrl;
+
+	
+	DateFormat inspireDateFormat = new SimpleDateFormat(
+			"yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+	
+	GeoserverRestApi gsr;
 
     private Logger logger = LoggerFactory.getLogger(SearchView.class);
     
     @Inject
-    public SearchView(Dao dao, RoleManager roleManager_, MailService mailService_, 
+    public SearchView(final Dao dao, RoleManager roleManager_, MailService mailService_, 
 			final ModalMessageWindow modalMessageWindow,
             @Named("gs_wms_url") String defaultWms,
-            GeoserverRestApi gsr) {
+            GeoserverRestApi gsr,
+            @Named("gn_url") String geonetworkUrl,
+			@Named("gn_user") String geonetworkUser,
+			@Named("gn_password") String geonetworkPassword,
+            @Named("login_page_url") String loginPageUrl) {
 
         ContainerManager<EcosystemServiceIndicator> containerManager = new ContainerManager<EcosystemServiceIndicator>(
                 dao, EcosystemServiceIndicator.class);
         this.mailService = mailService_;
         this.modalMessageWindow = modalMessageWindow;
+
+		this.geonetworkUrl = geonetworkUrl;
+		this.geonetworkUser = geonetworkUser;
+		this.geonetworkPassword = geonetworkPassword;
+		this.gsr = gsr;
+		this.geoserverUrl = defaultWms;
+		this.baseUrl = loginPageUrl.substring(0, loginPageUrl.lastIndexOf("/"));
+		
         this.modalMessageWindow.addCloseListener(new Window.CloseListener() {
             @Override
             public void windowClose(CloseEvent e) {
@@ -205,6 +250,27 @@ public class SearchView extends TwinPanelView implements View {
                              * Send mail to users
                              */
                             EcosystemServiceIndicator esi = (EcosystemServiceIndicator) item.getEntity();
+        					try {
+        						EcosystemServiceIndicator persistedEntity = dao.find(EcosystemServiceIndicator.class, esi.getId());
+								long id = publishOnGeoNetwork(persistedEntity);
+								if(id != -1) {
+									persistedEntity.setGeonetworkMetadataId(id);
+									dao.persist(persistedEntity);
+								}
+        						
+        					} catch (IOException e) {
+        						logger.error(e.getMessage(),e);
+                                Notification.show("Error creating metadata XML for GeoNetwork publishing : " + e.getMessage(),
+                                        Notification.Type.ERROR_MESSAGE);
+        					} catch (GNLibException e) {
+        						logger.error(e.getMessage(),e);
+                                Notification.show("Error publishing metadata on GeoNetwork : " + e.getMessage(),
+                                        Notification.Type.ERROR_MESSAGE);
+        					} catch (GNServerException e) {
+        						logger.error(e.getMessage(),e);
+                                Notification.show("Error connecting to GeoNetwork for metadata publishing: " + e.getMessage(),
+                                        Notification.Type.ERROR_MESSAGE);
+        					}
                             try {
                                 mailService.sendPublishedEmailMessage(esi, roleManager.getRole(), esi.getRole());
                             } catch (Exception e) {
@@ -279,6 +345,227 @@ public class SearchView extends TwinPanelView implements View {
 
     }
 
+    protected long publishOnGeoNetwork(EcosystemServiceIndicator entity) throws IOException, GNLibException, GNServerException {
+		RESTBoundingBox bbox = null;
+		if (entity.getSpatialDataType().getId() == 1) {
+			RESTCoverage layerInfo = gsr.getCoverageInfo(entity.getLayerName());
+			bbox = layerInfo.getLatLonBoundingBox();
+		} else {
+			RESTFeatureType layerInfo = gsr.getLayerInfo(entity.getLayerName());
+			bbox = layerInfo.getLatLonBoundingBox();
+		}
+
+		String thesaurusTemplate = StringUtils.join(
+				IOUtils.readLines(getClass().getResourceAsStream(
+						"/thesaurus_keywords.xml")), "\n");
+		String resourceTemplate = StringUtils.join(
+				IOUtils.readLines(getClass().getResourceAsStream(
+						"/resource_template.xml")), "\n");
+		StringBuilder builder = new StringBuilder();
+
+		for (String line : IOUtils.readLines(getClass().getResourceAsStream(
+				"/publish_gn_template.xml"))) {
+			builder.append(parseGeonetworkTemplate(
+					entity,
+					line,
+					thesaurusTemplate,
+					resourceTemplate,
+					new double[] { bbox.getMinX(), bbox.getMaxX(),
+							bbox.getMinY(), bbox.getMaxY() }));
+		}
+		GNClient client = new GNClient(geonetworkUrl, geonetworkUser, geonetworkPassword);
+		
+		GNInsertConfiguration cfg = new GNInsertConfiguration();
+        cfg.setCategory("datasets");
+        cfg.setGroup("1"); // group 1 is usually "all"
+        cfg.setStyleSheet("_none_");
+        cfg.setValidate(Boolean.FALSE);
+		
+        GNPrivConfiguration pcfg = new GNPrivConfiguration();
+
+        pcfg.addPrivileges(GNPrivConfiguration.GROUP_GUEST,    EnumSet.of(GNPriv.FEATURED));
+        pcfg.addPrivileges(GNPrivConfiguration.GROUP_INTRANET, EnumSet.of(GNPriv.DYNAMIC, GNPriv.FEATURED));
+        pcfg.addPrivileges(GNPrivConfiguration.GROUP_ALL,      EnumSet.of(GNPriv.VIEW, GNPriv.DYNAMIC, GNPriv.FEATURED));
+        pcfg.addPrivileges(2, EnumSet.allOf(GNPriv.class));
+        File tempFile = File.createTempFile("geonetwork", "xml");
+        try {
+	        FileUtils.write(tempFile, builder.toString(), "UTF-8");
+	        if(entity.getGeonetworkMetadataId() != null) {
+	        	client.updateMetadata(entity.getGeonetworkMetadataId(), tempFile);
+	        	return -1;
+	        } else {
+	        	return client.insertMetadata(cfg, tempFile);
+	        }
+	        
+        } finally {
+        	tempFile.delete();
+        }
+	}
+    
+    private String parseGeonetworkTemplate(EcosystemServiceIndicator entity,
+			String line, String thesaurusTemplate, String resourceTemplate,
+			double[] bbox) {
+		Calendar startYear = Calendar.getInstance();
+		if (entity.getInspireStartYear() != null) {
+			startYear.set(entity.getInspireStartYear(), 1, 1, 0, 0, 0);
+		}
+		Calendar endYear = Calendar.getInstance();
+		if (entity.getInspireEndYear() != null) {
+			endYear.set(entity.getInspireEndYear(), 1, 1, 0, 0, 0);
+		}
+		return line
+				.replace("{{FILEIDENTIFIER}}", entity.getId() + "")
+				.replace("{{LANGUAGE}}", entity.getInspireLanguage())
+				.replace("{{DATESTAMP}}",
+						inspireDateFormat.format(entity.getDateCreated()))
+				.replace("{{DATADATE}}",
+						inspireDateFormat.format(entity.getDateCreated()))
+				.replace("{{CRS}}", entity.getInspireCrs())
+				.replace("{{TITLE}}",
+						normalizeTemplateVariable(entity.getInspireTitle()))
+				.replace("{{ABSTRACT}}",
+						normalizeTemplateVariable(entity.getInspireAbstract()))
+				.replace(
+						"{{PURPOSE}}",
+						entity.getStudy().getStudyPurpose() != null ? entity
+								.getStudy().getStudyPurpose().getLabel() : "")
+				.replace(
+						"{{CREDIT}}",
+						normalizeTemplateVariable(entity.getStudy()
+								.getFundingSource())
+								+ ", "
+								+ normalizeTemplateVariable(entity.getStudy()
+										.getMainInvestigators()))
+				.replace(
+						"{{DATAPOCORG}}",
+						normalizeTemplateVariable(entity
+								.getInspireOwnerOrganization()))
+				.replace("{{DATAPOCPOS}}",
+						normalizeTemplateVariable(entity.getInspireOwnerName()))
+				.replace(
+						"{{DATAPOCMAIL}}",
+						normalizeTemplateVariable(entity.getInspireOwnerEmail()))
+				.replace(
+						"{{KEYWORD}}",
+						normalizeTemplateVariable(entity.getStudy()
+								.getKeywords()))
+				.replace("{{THESAURUSKEYWORDS}}",
+						getThesaurusKeywords(entity, thesaurusTemplate))
+				.replace(
+						"{{CONSTRAINTS}}",
+						normalizeTemplateVariable(entity
+								.getInspireResourceConstraints()))
+				.replace(
+						"{{SPATIALREPRESENTATION}}",
+						entity.getSpatialDataType().getId() == 1 ? "grid"
+								: "vector")
+				.replace(
+						"{{TEMPORALSTART}}",
+						entity.getInspireStartYear() != null ? inspireDateFormat
+								.format(startYear.getTime()) : "")
+				.replace(
+						"{{TEMPORALEND}}",
+						entity.getInspireStartYear() != null ? inspireDateFormat
+								.format(endYear.getTime()) : "")
+				.replace("{{EXTENT}}",
+						bbox[0] + "," + bbox[1] + "," + bbox[2] + "," + bbox[3])
+				.replace("{{WEST}}", bbox[0] + "")
+				.replace("{{EAST}}", bbox[1] + "")
+				.replace("{{SOUTH}}", bbox[2] + "")
+				.replace("{{NORTH}}", bbox[3] + "")
+				.replace(
+						"{{SUPPLEMENTAL}}",
+						normalizeTemplateVariable(entity.getStudy()
+								.getProjectReferences()))
+				.replace(
+						"{{LINEAGESTATEMENT}}",
+						entity.getQuantificationMethod() != null ? entity
+								.getQuantificationMethod().getLabel() : "")
+				.replace("{{RESOURCES}}",
+						getResources(entity, resourceTemplate))
+				+ "\n";
+	}
+
+	private CharSequence getResources(EcosystemServiceIndicator entity,
+			String resourceTemplate) {
+		StringBuilder builder = new StringBuilder();
+
+		String downloadUrl = baseUrl + "/getoriginal/" + entity.getId() + "/" + entity.getSpatialDataType().getId();
+		builder.append(createResource(resourceTemplate,
+				"WWW:LINK-1.0-http--link", downloadUrl , "<gco:CharacterString/>"));
+		if (entity.getSpatialDataType().getId() == 1) {
+			builder.append(createResource(resourceTemplate, "FILE:RASTER",
+					downloadUrl,
+					"<gmx:MimeFileType xmlns:gmx=\"http://www.isotc211.org/2005/gmx\" type=\"\"/>"));
+		}
+		builder.append(createResource(resourceTemplate,
+				"OGC:WMS-1.1.1-http-get-map", geoserverUrl, entity.getLayerName()));
+
+		return builder.toString() + "\n";
+	}
+
+	private String createResource(String template, String protocol, String url,
+			String name) {
+		return template.replace("{{RESOURCEURL}}", url)
+				.replace("{{RESOURCENAME}}", name)
+				.replace("{{RESOURCEPROTOCOL}}", protocol);
+	}
+
+	private String normalizeTemplateVariable(String value) {
+		return value != null ? value : "";
+	}
+
+	private String getThesaurusKeywords(EcosystemServiceIndicator entity,
+			String thesaurusTemplate) {
+		StringBuilder builder = new StringBuilder();
+
+		builder.append(createThesaurusKeyword(thesaurusTemplate,
+				"JRC Ecosystem Service", entity.getEcosystemService()
+						.getDescription(), entity.getDateCreated()));
+		builder.append(createThesaurusKeyword(thesaurusTemplate,
+				"JRC Indicator", entity.getIndicator().getLabel(),
+				entity.getDateCreated()));
+		builder.append(createThesaurusKeyword(thesaurusTemplate,
+				"JRC Project Type",
+				entity.getStudy().getProjectType() != null ? entity.getStudy()
+						.getProjectType().getLabel() : "", entity
+						.getDateCreated()));
+		builder.append(createThesaurusKeyword(thesaurusTemplate,
+				"JRC Ecosystem Service Accounting Type", entity
+						.getEcosystemServiceAccountingType() != null ? entity
+						.getEcosystemServiceAccountingType().getLabel() : "",
+				entity.getDateCreated()));
+		builder.append(createThesaurusKeyword(thesaurusTemplate,
+				"JRC Ecosystem Service Benefit Type", entity
+						.getEcosystemServiceBenefitType() != null ? entity
+						.getEcosystemServiceBenefitType().getLabel() : "",
+				entity.getDateCreated()));
+		builder.append(createThesaurusKeyword(thesaurusTemplate,
+				"JRC Spatial Level", entity.getSpatialLevel() != null ? entity
+						.getSpatialLevel().getLabel() : "", entity
+						.getDateCreated()));
+		if (entity.getBiomes() != null) {
+			for (Biome biome : entity.getBiomes()) {
+				builder.append(createThesaurusKeyword(thesaurusTemplate,
+						"JRC Biomes", biome.getLabel(), entity.getDateCreated()));
+			}
+		}
+		builder.append(createThesaurusKeyword(thesaurusTemplate,
+				"JRC Objectives Met",
+				entity.getStudyObjectiveMet() != null ? entity
+						.getStudyObjectiveMet().getLabel() : "", entity
+						.getDateCreated()));
+
+		return builder.toString() + "\n";
+	}
+
+	private Object createThesaurusKeyword(String template, String key,
+			String value, Date date) {
+		return template.replace("{{THESAURUSKEYWORD}}", value)
+				.replace("{{THESAURUSNAME}}", key)
+				.replace("{{THESAURUSDATE}}", inspireDateFormat.format(date));
+	}
+    
     private FilterPanel<EcosystemServiceIndicator> getFilterPanel() {
 
         FilterPanel<EcosystemServiceIndicator> fp = new FilterPanel<EcosystemServiceIndicator>(

@@ -1,0 +1,13 @@
+<gmd:onLine>
+    <gmd:CI_OnlineResource>
+        <gmd:linkage>
+            <gmd:URL>{{RESOURCEURL}}</gmd:URL>
+        </gmd:linkage>
+        <gmd:protocol>
+            <gco:CharacterString>{{RESOURCEPROTOCOL}}</gco:CharacterString>
+        </gmd:protocol>
+        <gmd:name>
+            {{RESOURCENAME}}
+        </gmd:name>
+    </gmd:CI_OnlineResource>
+</gmd:onLine>

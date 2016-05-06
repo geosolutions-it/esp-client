@@ -449,6 +449,17 @@ public class EcosystemServiceIndicator implements HasRole {
         this.spatialReferenceInfo = spatialReferenceInfo;
     }
     
+    private Long geonetworkMetadataId;
+    
+    @Column(name = "gn_metadata_id")
+    public Long getGeonetworkMetadataId() {
+        return geonetworkMetadataId;
+    }
+    
+    public void setGeonetworkMetadataId(Long geonetworkMetadataId) {
+        this.geonetworkMetadataId = geonetworkMetadataId;
+    }
+    
 
     private Role role;
     
@@ -619,6 +630,17 @@ public class EcosystemServiceIndicator implements HasRole {
 
     public void setInspireLineage(String inspireLineage) {
         this.inspireLineage = inspireLineage;
+    }
+    
+    private String inspireCrs;
+
+    @Column(name = "inspire_crs")
+    public String getInspireCrs() {
+        return inspireCrs;
+    }
+
+    public void setInspireCrs(String inspireCrs) {
+        this.inspireCrs = inspireCrs;
     }
     
     private String inspireOwnerName;
