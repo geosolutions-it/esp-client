@@ -380,6 +380,7 @@ public class SearchView extends TwinPanelView implements View {
         cfg.setGroup("1"); // group 1 is usually "all"
         cfg.setStyleSheet("_none_");
         cfg.setValidate(Boolean.FALSE);
+        cfg.setEncoding("UTF-8");
 		
         GNPrivConfiguration pcfg = new GNPrivConfiguration();
 
@@ -387,11 +388,13 @@ public class SearchView extends TwinPanelView implements View {
         pcfg.addPrivileges(GNPrivConfiguration.GROUP_INTRANET, EnumSet.of(GNPriv.DYNAMIC, GNPriv.FEATURED));
         pcfg.addPrivileges(GNPrivConfiguration.GROUP_ALL,      EnumSet.of(GNPriv.VIEW, GNPriv.DYNAMIC, GNPriv.FEATURED));
         pcfg.addPrivileges(2, EnumSet.allOf(GNPriv.class));
+        
+        
         File tempFile = File.createTempFile("geonetwork", "xml");
         try {
 	        FileUtils.write(tempFile, builder.toString(), "UTF-8");
 	        if(entity.getGeonetworkMetadataId() != null) {
-	        	client.updateMetadata(entity.getGeonetworkMetadataId(), tempFile);
+	        	client.updateMetadata(entity.getGeonetworkMetadataId(), tempFile, "UTF-8");
 	        	return -1;
 	        } else {
 	        	return client.insertMetadata(cfg, tempFile);
@@ -499,7 +502,7 @@ public class SearchView extends TwinPanelView implements View {
 					"<gmx:MimeFileType xmlns:gmx=\"http://www.isotc211.org/2005/gmx\" type=\"\"/>"));
 		}
 		builder.append(createResource(resourceTemplate,
-				"OGC:WMS-1.1.1-http-get-map", geoserverUrl, entity.getLayerName()));
+				"OGC:WMS-1.1.1-http-get-map", geoserverUrl, "<gco:CharacterString>" + entity.getLayerName() + "</gco:CharacterString>"));
 
 		return builder.toString() + "\n";
 	}

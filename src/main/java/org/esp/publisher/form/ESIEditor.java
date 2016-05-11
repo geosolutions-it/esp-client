@@ -1,20 +1,10 @@
 package org.esp.publisher.form;
 
-import it.geosolutions.geonetwork.GNClient;
-import it.geosolutions.geonetwork.exception.GNLibException;
-import it.geosolutions.geonetwork.exception.GNServerException;
-import it.geosolutions.geonetwork.util.GNInsertConfiguration;
-import it.geosolutions.geonetwork.util.GNPriv;
-import it.geosolutions.geonetwork.util.GNPrivConfiguration;
-import it.geosolutions.geoserver.rest.decoder.RESTBoundingBox;
-import it.geosolutions.geoserver.rest.decoder.RESTCoverage;
-import it.geosolutions.geoserver.rest.decoder.RESTFeatureType;
 import it.jrc.auth.RoleManager;
 import it.jrc.domain.adminunits.Grouping;
 import it.jrc.domain.adminunits.Grouping_;
 import it.jrc.form.ButtonFactory;
 import it.jrc.form.FieldGroup;
-import it.jrc.form.FieldGroupManager;
 import it.jrc.form.component.FormConstants;
 import it.jrc.form.component.YearField;
 import it.jrc.form.controller.EditorController;
@@ -23,16 +13,11 @@ import it.jrc.form.view.DefaultEditorView;
 import it.jrc.form.view.IEditorView;
 import it.jrc.persist.Dao;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,11 +31,8 @@ import javax.persistence.metamodel.Attribute;
 import javax.persistence.metamodel.SingularAttribute;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.esp.domain.blueprint.ArealUnit_;
-import org.esp.domain.blueprint.Biome;
 import org.esp.domain.blueprint.DataSource;
 import org.esp.domain.blueprint.DataSource_;
 import org.esp.domain.blueprint.EcosystemService;
@@ -89,7 +71,6 @@ import org.vaadin.dialogs.ConfirmDialog;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.sun.xml.internal.ws.util.StreamUtils;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.Property.ValueChangeListener;
 import com.vaadin.data.util.converter.Converter;
