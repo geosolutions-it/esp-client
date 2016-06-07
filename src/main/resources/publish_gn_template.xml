@@ -12,7 +12,7 @@
     <gmd:language>
         <gmd:LanguageCode
             codeList="http://www.loc.gov/standards/iso639-2/"
-            codeListValue="{{LANGUAGE}}"/>
+            codeListValue="Eng">Eng</gmd:LanguageCode>
     </gmd:language>
     <gmd:characterSet>
         <gmd:MD_CharacterSetCode 
@@ -117,6 +117,16 @@
                                     </gmd:electronicMailAddress>
                                 </gmd:CI_Address>
                             </gmd:address>
+                            <gmd:onlineResource>
+							   <gmd:CI_OnlineResource>
+							      <gmd:linkage>
+							         <gmd:URL>{{DATAPOCSITE}}</gmd:URL>
+							      </gmd:linkage>
+							      <gmd:name>
+							      	<gco:CharacterString>{{DATAPOCSITE}}</gco:CharacterString>
+							      </gmd:name>
+							   </gmd:CI_OnlineResource>
+							</gmd:onlineResource>
                         </gmd:CI_Contact>
                     </gmd:contactInfo>
                     <gmd:role>
@@ -207,7 +217,7 @@
             </gmd:spatialResolution>
             <gmd:language>
                 <gmd:LanguageCode codeList="http://www.loc.gov/standards/iso639-2/" 
-                                  codeListValue="{{LANGUAGE}}"/>
+                                  codeListValue="{{LANGUAGELOWER}}">{{LANGUAGELOWER}}</gmd:LanguageCode>
             </gmd:language>
             <gmd:characterSet>
                 <gmd:MD_CharacterSetCode 
@@ -215,7 +225,7 @@
                     codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#MD_CharacterSetCode"/>
             </gmd:characterSet>
             <gmd:topicCategory>
-                <gmd:MD_TopicCategoryCode/>
+                <gmd:MD_TopicCategoryCode>{{TOPIC}}</gmd:MD_TopicCategoryCode>
             </gmd:topicCategory>
             <gmd:extent>
                 <gmd:EX_Extent>

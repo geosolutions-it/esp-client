@@ -26,6 +26,7 @@ public class MailService {
 
     private String BACK_SUBJECT = "ESP-MAPPING : Send back for corrections";
     private String PUBLISH_SUBJECT = "ESP-MAPPING : Your map has been published";
+    private String NEWDATASET_SUBJECT = "ESP-MAPPING : New map has been uploaded and need to be verified and published";
 
     private String hostName;
 
@@ -76,6 +77,11 @@ public class MailService {
         email.setTextMsg("Your email client does not support HTML messages");
         email.send();
     }
+    
+    public void sendUploadedEmail(String message, String to) throws EmailException,
+    	IOException {
+		sendEmail(NEWDATASET_SUBJECT, message, to);
+	}
 
     public void sendBackEmailMessage(Message message, Role from , Role to) throws EmailException, IOException,
             TemplateException {

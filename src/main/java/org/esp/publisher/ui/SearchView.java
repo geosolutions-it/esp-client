@@ -419,6 +419,7 @@ public class SearchView extends TwinPanelView implements View {
 		return line
 				.replace("{{FILEIDENTIFIER}}", entity.getId() + "")
 				.replace("{{LANGUAGE}}", entity.getInspireLanguage())
+				.replace("{{LANGUAGELOWER}}", entity.getInspireLanguage().toLowerCase())
 				.replace("{{DATESTAMP}}",
 						inspireDateFormat.format(entity.getDateCreated()))
 				.replace("{{DATADATE}}",
@@ -449,11 +450,16 @@ public class SearchView extends TwinPanelView implements View {
 						"{{DATAPOCMAIL}}",
 						normalizeTemplateVariable(entity.getInspireOwnerEmail()))
 				.replace(
+						"{{DATAPOCSITE}}",
+						normalizeTemplateVariable(entity.getInspireOwnerSite()))	
+				.replace(
 						"{{KEYWORD}}",
 						normalizeTemplateVariable(entity.getStudy()
 								.getKeywords()))
 				.replace("{{THESAURUSKEYWORDS}}",
 						getThesaurusKeywords(entity, thesaurusTemplate))
+				.replace("{{TOPIC}}",
+						entity.getInspireTopicCategory() != null ? entity.getInspireTopicCategory().getCategory() : "")
 				.replace(
 						"{{CONSTRAINTS}}",
 						normalizeTemplateVariable(entity
@@ -558,7 +564,9 @@ public class SearchView extends TwinPanelView implements View {
 				entity.getStudyObjectiveMet() != null ? entity
 						.getStudyObjectiveMet().getLabel() : "", entity
 						.getDateCreated()));
-
+		if(entity.getInspireTheme() != null) {
+			builder.append(createThesaurusKeyword(thesaurusTemplate, "GEMET", entity.getInspireTheme().getTheme(), entity.getDateCreated()));
+		}
 		return builder.toString() + "\n";
 	}
 

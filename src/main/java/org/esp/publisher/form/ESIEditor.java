@@ -1,5 +1,14 @@
 package org.esp.publisher.form;
 
+import it.geosolutions.geonetwork.GNClient;
+import it.geosolutions.geonetwork.exception.GNLibException;
+import it.geosolutions.geonetwork.exception.GNServerException;
+import it.geosolutions.geonetwork.util.GNInsertConfiguration;
+import it.geosolutions.geonetwork.util.GNPriv;
+import it.geosolutions.geonetwork.util.GNPrivConfiguration;
+import it.geosolutions.geoserver.rest.decoder.RESTBoundingBox;
+import it.geosolutions.geoserver.rest.decoder.RESTCoverage;
+import it.geosolutions.geoserver.rest.decoder.RESTFeatureType;
 import it.jrc.auth.RoleManager;
 import it.jrc.domain.adminunits.Grouping;
 import it.jrc.domain.adminunits.Grouping_;
@@ -18,6 +27,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -31,7 +41,10 @@ import javax.persistence.metamodel.Attribute;
 import javax.persistence.metamodel.SingularAttribute;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.commons.mail.EmailException;
 import org.esp.domain.blueprint.ArealUnit_;
 import org.esp.domain.blueprint.DataSource;
 import org.esp.domain.blueprint.DataSource_;
@@ -63,6 +76,7 @@ import org.esp.publisher.styler.StylerFieldGroup;
 import org.esp.publisher.styler.StylerFieldGroup.StyleChangeListener;
 import org.esp.publisher.ui.ViewModule;
 import org.esp.server.FileService;
+import org.esp.server.MailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vaadin.addon.leaflet.LMap;
@@ -153,8 +167,11 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	private FileService fileService;
 	private static List<String> inspireGroups = new ArrayList<String>();
 	
-
+	private String geonetworkUrl;
+	private String geonetworkUser;
+	private String geonetworkPassword;
 	
+	private MailService mailService;
 	
 	static {
 		inspireGroups.add(INSPIRE);
@@ -238,14 +255,21 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 
 	@Inject
 	public ESIEditor(Dao dao, RoleManager roleManager, GeoserverRestApi gsr,
-			FileService fileService,
+			FileService fileService, MailService mailService,
 			@Named("geotiff_limit_mb") int geotiffSizeLimit,
 			@Named("shapefile_limit_mb") int shapefileSizeLimit,
-			@Named("shapefile_limit_records") int shapefileRecordsLimit
+			@Named("shapefile_limit_records") int shapefileRecordsLimit,
+			@Named("gn_url") String geonetworkUrl,
+			@Named("gn_user") String geonetworkUser,
+			@Named("gn_password") String geonetworkPassword
 			) {
 
 		super(EcosystemServiceIndicator.class, dao);
+		this.mailService = mailService;
 		
+		this.geonetworkUrl = geonetworkUrl;
+		this.geonetworkUser = geonetworkUser;
+		this.geonetworkPassword = geonetworkPassword;
 		
 		dummyIndicator = dao.find(Indicator.class, 0l);
 		dummyEcosystemService = dao.find(EcosystemService.class, 0l);
@@ -328,26 +352,34 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		 * TemporalUnit_.label);
 		 */
 		inspireTitle = ff.addTextField(EcosystemServiceIndicator_.inspireTitle);
+		inspireTitle.setCaption("Title");
 		inspireAbstract = ff
 				.addTextArea(EcosystemServiceIndicator_.inspireAbstract);
-		ff.addField(EcosystemServiceIndicator_.inspireTopicCategory);
+		inspireAbstract.setCaption("Abstract");
+		ff.addField(EcosystemServiceIndicator_.inspireTopicCategory).setCaption("Topic Category");
 		inspireLanguage = ff
 				.addTextField(EcosystemServiceIndicator_.inspireLanguage);
+		inspireLanguage.setCaption("Language");
 		inspireStartYear = new YearField();
 		ff.addField(EcosystemServiceIndicator_.inspireStartYear,
 				inspireStartYear);
+		inspireStartYear.setCaption("Start Year/Temmporal Extent Begin Date");
 		inspireEndYear = new YearField();
 		ff.addField(EcosystemServiceIndicator_.inspireEndYear, inspireEndYear);
+		inspireEndYear.setCaption("End Year/Temmporal Extent End Date");
 		inspireResourceConstraints = ff
 				.addTextField(EcosystemServiceIndicator_.inspireResourceConstraints);
+		inspireResourceConstraints.setCaption("Constraints");
 		inspireLineage = ff
 				.addTextField(EcosystemServiceIndicator_.inspireLineage);
-		ff.addField(EcosystemServiceIndicator_.inspireTheme);
+		inspireLineage.setCaption("Lineage/Quality Info");
+		ff.addField(EcosystemServiceIndicator_.inspireTheme).setCaption("Theme");;
 		inspireCrs = ff.addTextField(EcosystemServiceIndicator_.inspireCrs);
-		ff.addField(EcosystemServiceIndicator_.inspireOwnerName);
-		ff.addField(EcosystemServiceIndicator_.inspireOwnerOrganization);
-		ff.addField(EcosystemServiceIndicator_.inspireOwnerEmail);
-		ff.addField(EcosystemServiceIndicator_.inspireOwnerSite);
+		inspireCrs.setCaption("Reference System");
+		ff.addField(EcosystemServiceIndicator_.inspireOwnerName).setCaption("Point of contact: Owner Name");
+		ff.addField(EcosystemServiceIndicator_.inspireOwnerOrganization).setCaption("Point of contact: Owner Organization");
+		ff.addField(EcosystemServiceIndicator_.inspireOwnerEmail).setCaption("Point of contact: Owner Email");
+		ff.addField(EcosystemServiceIndicator_.inspireOwnerSite).setCaption("Point of contact: Owner Site");
 		addFieldGroup(INSPIRE);
 	}
 
@@ -1082,6 +1114,13 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		}
 	}
 
+	protected void removeFromGeoNetwork(EcosystemServiceIndicator entity) throws IOException, GNLibException, GNServerException {
+		if(entity.getGeonetworkMetadataId() != null) {
+			GNClient client = new GNClient(geonetworkUrl, geonetworkUser, geonetworkPassword);
+			client.deleteMetadata(entity.getGeonetworkMetadataId());
+		}
+	}
+	
 	/**
 	 * Updates the UI after a new layer has been updloaded and published.
 	 * Metadata extracted from the file is shown to the user.
@@ -1120,6 +1159,22 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 			unpublishEntity(entity);
 			UI.getCurrent().getNavigator()
 					.navigateTo(ViewModule.HOME + "/reset");
+			
+			try {
+				removeFromGeoNetwork(entity);
+			} catch (IOException e) {
+				logger.error(e.getMessage(),e);
+                Notification.show("Error removing metadata from GeoNetwork : " + e.getMessage(),
+                        Notification.Type.ERROR_MESSAGE);
+			} catch (GNLibException e) {
+				logger.error(e.getMessage(),e);
+                Notification.show("Error removing metadata from GeoNetwork : " + e.getMessage(),
+                        Notification.Type.ERROR_MESSAGE);
+			} catch (GNServerException e) {
+				logger.error(e.getMessage(),e);
+                Notification.show("Error connecting to GeoNetwork for metadata removing: " + e.getMessage(),
+                        Notification.Type.ERROR_MESSAGE);
+			}
 			super.doPostDelete(entity);
 		} catch (PublishException e) {
 			showError("Error during delete: " + e.getMessage());
@@ -1289,7 +1344,15 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				if (!commitForm(true)) {
 					getEntity().setStatus(preStatus);
 				}
-
+				String message="New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName() + " has been uploaded";
+				String to = "joachim.maes@jrc.ec.europa.eu";
+				try {
+					mailService.sendUploadedEmail(message, to);
+				} catch (EmailException e) {
+					showError("Error sending email: " + e.getMessage());
+				} catch (IOException e) {
+					showError("Error sending email: " + e.getMessage());
+				}
 			}
 		});
 
