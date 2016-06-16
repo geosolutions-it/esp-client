@@ -360,13 +360,14 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		inspireLanguage = ff
 				.addTextField(EcosystemServiceIndicator_.inspireLanguage);
 		inspireLanguage.setCaption("Language");
+		inspireLanguage.setVisible(false);
 		inspireStartYear = new YearField();
 		ff.addField(EcosystemServiceIndicator_.inspireStartYear,
 				inspireStartYear);
-		inspireStartYear.setCaption("Start Year/Temmporal Extent Begin Date");
+		inspireStartYear.setCaption("Start Year/Temporal Extent Begin Date");
 		inspireEndYear = new YearField();
 		ff.addField(EcosystemServiceIndicator_.inspireEndYear, inspireEndYear);
-		inspireEndYear.setCaption("End Year/Temmporal Extent End Date");
+		inspireEndYear.setCaption("End Year/Temporal Extent End Date");
 		inspireResourceConstraints = ff
 				.addTextField(EcosystemServiceIndicator_.inspireResourceConstraints);
 		inspireResourceConstraints.setCaption("Constraints");
