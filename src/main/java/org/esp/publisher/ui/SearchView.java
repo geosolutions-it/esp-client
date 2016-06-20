@@ -754,6 +754,7 @@ public class SearchView extends TwinPanelView implements View {
             }
 
         }
+    	table.refresh();
     }
 
     private EntityTable<EcosystemServiceIndicator> getEcosystemServiceIndicatorTable() {
