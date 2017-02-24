@@ -83,8 +83,7 @@ public class MapLegend extends CssLayout {
 	            
 	        } else if (colourMap != null) {    
 	            ck.setVisible(true);
-	            List<ColourMapEntry> colourMapEntries = colourMap
-	                    .getColourMapEntries();
+	            List<ColourMapEntry> colourMapEntries = colourMap.getColourMapEntries();
 	
 	            if (colourMapEntries != null && colourMapEntries.size() == 2) {
 	                Double minVal = entity.getMinVal();

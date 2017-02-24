@@ -22,6 +22,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 
 import org.esp.domain.publisher.ColourMap;
@@ -138,7 +139,6 @@ public class EcosystemServiceIndicator implements HasRole {
 
     @NotNull
     @ManyToOne
-    @JoinColumn(name = "indicator_id")
     public Indicator getIndicator() {
         return indicator;
     }

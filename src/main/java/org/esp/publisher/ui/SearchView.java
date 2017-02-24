@@ -579,8 +579,7 @@ public class SearchView extends TwinPanelView implements View {
     
     private FilterPanel<EcosystemServiceIndicator> getFilterPanel() {
 
-        FilterPanel<EcosystemServiceIndicator> fp = new FilterPanel<EcosystemServiceIndicator>(
-                esiContainer, dao) {
+        FilterPanel<EcosystemServiceIndicator> fp = new FilterPanel<EcosystemServiceIndicator>(esiContainer, dao) {
             @Override
             public void doFiltering() {
                 super.doFiltering();
@@ -588,9 +587,9 @@ public class SearchView extends TwinPanelView implements View {
             }
         };
         
-        fp.addFilterField(EcosystemServiceIndicator_.ecosystemService, "SELECT es FROM EcosystemService es WHERE es.id > 0");
+        fp.addFilterField(EcosystemServiceIndicator_.ecosystemService, "SELECT es FROM EcosystemService es WHERE es.id > 0 order by label");
         
-        fp.addFilterField(EcosystemServiceIndicator_.study, "SELECT st FROM Study st WHERE st.id > 0");
+        fp.addFilterField(EcosystemServiceIndicator_.study, "SELECT st FROM Study st WHERE st.id > 0 order by study_name");
         return fp;
 
     }

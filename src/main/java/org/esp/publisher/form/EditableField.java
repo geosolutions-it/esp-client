@@ -3,7 +3,17 @@ package org.esp.publisher.form;
 import it.jrc.form.controller.EditorController;
 import it.jrc.persist.Dao;
 
+import java.util.Arrays;
 import java.util.List;
+
+import org.esp.domain.blueprint.ArealUnit;
+import org.esp.domain.blueprint.ArealUnit_;
+import org.esp.domain.blueprint.QuantificationUnit;
+import org.esp.domain.blueprint.QuantificationUnit_;
+import org.esp.domain.blueprint.TemporalUnit;
+import org.esp.domain.blueprint.TemporalUnit_;
+import org.esp.domain.publisher.ColourMap;
+import org.esp.domain.publisher.ColourMap_;
 
 import com.vaadin.data.Property;
 import com.vaadin.ui.Component;
@@ -62,7 +72,19 @@ public abstract class EditableField<T> extends CustomField<T> {
     }
 
     protected void populateCombo() {
-        List<T> items = dao.all(clazz);
+    	// if clazz = ColourMap || QuantificationUnit || AeralUnit then sort   
+    	List<T> items = null; 
+    	if (clazz.getName() == QuantificationUnit.class.getName()) {
+        	items = dao.all(clazz, QuantificationUnit_.label);
+    	} else if (clazz.getName() == ColourMap.class.getName()) {
+        	items = dao.all(clazz, ColourMap_.label);
+    	} else if (clazz.getName() == ArealUnit.class.getName()) { 
+        	items = dao.all(clazz, ArealUnit_.label);
+    	} else if (clazz.getName() == TemporalUnit.class.getName()) { 
+         	items = dao.all(clazz, TemporalUnit_.label);
+     	} else {
+        	items = dao.all(clazz);
+        }
         for (T t : items) {
             encapsulatedField.addItem(t);
         }

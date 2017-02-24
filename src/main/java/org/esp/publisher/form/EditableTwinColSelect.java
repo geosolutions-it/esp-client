@@ -8,6 +8,8 @@ import it.jrc.persist.Dao;
 import java.util.List;
 import java.util.Set;
 
+import javax.persistence.metamodel.SingularAttribute;
+
 import com.vaadin.data.Property;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.CssLayout;
@@ -48,7 +50,7 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
         }
     }
 
-    public EditableTwinColSelect(final Class<T> clazz, Dao dao) {
+    public EditableTwinColSelect(final Class<T> clazz, Dao dao, SingularAttribute<?, ?> orderBy) {
 
         this.clazz = clazz;
         this.dao = dao;
@@ -69,7 +71,7 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
 
         combo.setImmediate(true);
 
-        populateCombo();
+        populateCombo(orderBy);
 
         combo.addValueChangeListener(new Property.ValueChangeListener() {
 
@@ -131,8 +133,13 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
         super.setInternalValue(newValue);
     }
 
-    protected void populateCombo() {
-        List<T> items = dao.all(clazz);
+    protected void populateCombo(SingularAttribute<?, ?> orderBy) {
+    	List<T> items = null; 
+    	if(orderBy!= null) {
+    		items = dao.all(clazz,orderBy);
+    	} else{
+    		items = dao.all(clazz);
+    	}
         for (T t : items) {
             combo.addItem(t);
         }

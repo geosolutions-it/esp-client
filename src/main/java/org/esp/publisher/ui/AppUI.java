@@ -38,7 +38,7 @@ public class AppUI extends ScopedUI  {
 
 	private GuicedViewProvider viewProvider;
 
-        private HeaderView headerView;
+    private HeaderView headerView;
 
 	@Inject
 	public AppUI(Dao dao, GuicedViewProvider viewProvider, HeaderView headerView) {
