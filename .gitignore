@@ -9,3 +9,4 @@ runtime.properties
 .settings/*
 /target
 src/main/webapp/VAADIN/themes/dashboard/styles.css
+WorkprojectsJRCdocs

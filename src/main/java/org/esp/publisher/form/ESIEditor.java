@@ -466,6 +466,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		}
 		super.doUpdate(entity);
 		esiEditorViewTab1.setNewStatus(false);
+		esiEditorViewTab1.setNewStatusLayout(true);
 		SpatialDataPublisher filePublisher = getFilePublisher();
 		Map<String, Class<?>> attributes;
 		try {
