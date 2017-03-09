@@ -2,6 +2,7 @@ package org.esp.publisher.form;
 
 import it.jrc.form.component.FormConstants;
 import it.jrc.form.controller.EditorController;
+import it.jrc.form.controller.EditorController.DeleteCompleteListener;
 import it.jrc.form.controller.EditorController.EditCompleteListener;
 import it.jrc.persist.Dao;
 
@@ -50,8 +51,10 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
         }
     }
 
+    private  SingularAttribute<?, ?> orderBy = null;
     public EditableTwinColSelect(final Class<T> clazz, Dao dao, SingularAttribute<?, ?> orderBy) {
 
+        this.orderBy = orderBy;
         this.clazz = clazz;
         this.dao = dao;
 
@@ -125,6 +128,16 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
 
             }
         });
+        
+        editor.addDeleteCompleteListener(new DeleteCompleteListener<T>() {
+
+			@Override
+			public void onDeleteComplete(T entity) {
+				combo.removeAllItems();
+		        populateCombo(orderBy);
+			}
+        	
+		});
     }
 
     @Override

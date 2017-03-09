@@ -83,11 +83,7 @@ public class ESIEditorView extends VerticalLayout implements IEditorView<Ecosyst
         
         if(!isNew){
             showStyler();
-        } else {
-        	for (Component c : componentsToHideLayout) {
-        		c.setVisible(false);
-        	}
-        }
+        } 
     }
     public void setNewStatusLayout(boolean newStatus) {
         
