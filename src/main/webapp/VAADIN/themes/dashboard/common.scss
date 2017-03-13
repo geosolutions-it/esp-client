@@ -112,9 +112,17 @@ $font: normal 14px/1.5 "Open Sans", Arial, sans-serif;
 		background: transparent;
 	}
 	
+	.v-filterselect-suggestpopup .gwt-MenuItem span {
+		white-space: pre-line;
+	}
+	
+	.v-filterselect-suggestpopup {
+		max-width: 600px;
+	}
+	
 	.v-filterselect-suggestpopup table {
 		width: auto;
-	}
+	}	
 	
 	.v-contextmenu,
 	.v-menubar-popup,
