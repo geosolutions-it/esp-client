@@ -4,6 +4,7 @@ package org.esp.publisher.form;
 import it.jrc.form.component.FormConstants;
 import it.jrc.form.controller.EditorController;
 import it.jrc.form.controller.EditorController.EditCompleteListener;
+import it.jrc.form.controller.EditorController.DeleteCompleteListener;
 import it.jrc.persist.Dao;
 
 import java.util.List;
@@ -28,14 +29,14 @@ public class EditableCombo<T> extends EditableField<T> {
     public EditableCombo(final Class<T> clazz, Dao dao) {
         this(clazz, dao, "");
     }
-    
+    private String query = null;
     public EditableCombo(final Class<T> clazz, Dao dao, String query) {
         
         /*
          * The selection widget
          */
         super(new ComboBox2<T>());
-
+        this.query = query;
         this.clazz = clazz;
         this.dao = dao;
 
@@ -81,23 +82,34 @@ public class EditableCombo<T> extends EditableField<T> {
         editor.addEditCompleteListener(new EditCompleteListener<T>() {
             @Override
             public void onEditComplete(T entity) {
-
-//                encapsulatedField.removeAllItems();
-//                populateCombo();
-                if (encapsulatedField.containsId(entity)) {
-                    System.out.println("Contained already.");
-                } else {
-                    System.out.println("Adding.");
-                    encapsulatedField.addItem(entity);
-                    encapsulatedField.setValue(entity);
-                }
-                
-                fireValueChange(false);
+            	
+            	encapsulatedField.removeAllItems();
+				if(query!=null && !query.isEmpty()){
+		            populateCombo(query);
+		        }else{
+		            populateCombo();
+		        }
+				encapsulatedField.setValue(entity);
+				fireValueChange(false);
 
                 UI.getCurrent().removeWindow(w);
 
             }
         });
+        
+        editor.addDeleteCompleteListener(new DeleteCompleteListener<T>() {
+
+			@Override
+			public void onDeleteComplete(T entity) {
+				encapsulatedField.removeAllItems();
+				if(query!=null && !query.isEmpty()){
+		            populateCombo(query);
+		        }else{
+		            populateCombo();
+		        }
+			}
+        	
+		});
     }
     
     @Override

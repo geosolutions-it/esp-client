@@ -76,4 +76,10 @@ public class MessageEditorView extends VerticalLayout implements IEditorView<Mes
 
     }
 
+	@Override
+	public void buildForm(List<FieldGroup<Message>> fields, boolean isInspire) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

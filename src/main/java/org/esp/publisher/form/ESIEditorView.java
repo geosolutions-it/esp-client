@@ -14,13 +14,13 @@ import org.esp.domain.blueprint.EcosystemServiceIndicator;
 import org.esp.publisher.styler.StylerFieldGroup;
 
 import com.vaadin.data.fieldgroup.BeanFieldGroup;
+import com.vaadin.shared.ui.label.ContentMode;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.CssLayout;
 import com.vaadin.ui.Field;
 import com.vaadin.ui.VerticalLayout;
 
-public class ESIEditorView extends VerticalLayout implements
-        IEditorView<EcosystemServiceIndicator> {
+public class ESIEditorView extends VerticalLayout implements IEditorView<EcosystemServiceIndicator> {
 
     // private Label status;
     private SubmitPanel topSubmitPanel;
@@ -28,6 +28,7 @@ public class ESIEditorView extends VerticalLayout implements
     private CssLayout mainPanel;
     private List<Component> componentsToToggle = new ArrayList<Component>();
     private List<Component> componentsToHide = new ArrayList<Component>();
+    private List<Component> componentsToHideLayout = new ArrayList<Component>();
 
     public ESIEditorView() {
         addStyleName("display-panel");
@@ -82,19 +83,30 @@ public class ESIEditorView extends VerticalLayout implements
         
         if(!isNew){
             showStyler();
+        } 
+    }
+    public void setNewStatusLayout(boolean newStatus) {
+        
+        for (Component c : componentsToHideLayout) {
+            c.setVisible(newStatus);
         }
+        
     }
 
     @Override
-    public void buildForm(List<FieldGroup<EcosystemServiceIndicator>> fields) {
+    public void buildForm(List<FieldGroup<EcosystemServiceIndicator>> fields, boolean isInspire) {
         for (FieldGroup<EcosystemServiceIndicator> fieldGroupMeta : fields) {
 
             HtmlLabel spacer = new HtmlLabel("&nbsp;");
 
-            BeanFieldGroup<EcosystemServiceIndicator> bfg = fieldGroupMeta
-                    .getFieldGroup();
-
-            HtmlHeader c = new HtmlHeader(fieldGroupMeta.getLabel());
+            BeanFieldGroup<EcosystemServiceIndicator> bfg = fieldGroupMeta.getFieldGroup();
+            HtmlHeader c = null;
+            if (isInspire == true) {
+            	c = new HtmlHeader("<a href='http://inspire.ec.europa.eu/' target='_blank'>Inspire</a> required Metadata", ContentMode.HTML);	
+            } else { 
+            	c = new HtmlHeader(fieldGroupMeta.getLabel()); 
+            }
+            
             mainPanel.addComponent(c);
 
             if(fieldGroupMeta.getLabel() == ESIEditor.SPATIAL_DATA) {
@@ -102,14 +114,16 @@ public class ESIEditorView extends VerticalLayout implements
                 componentsToToggle.add(spacer);
             }
             if(fieldGroupMeta.getLabel() == ESIEditor.LAY_OUT) {
-                componentsToHide.add(c);
-                componentsToHide.add(spacer);
+            	
+            	componentsToHideLayout.add(c);
+            	componentsToHideLayout.add(spacer);
                 for (Field<?> field : fieldGroupMeta.getFieldGroup().getFields()) {
-                    componentsToHide.add(field);
+                	componentsToHideLayout.add(field);
                 }
                 Component content = ((StylerFieldGroup) fieldGroupMeta).getContent();
                 mainPanel.addComponent(content);
-                componentsToHide.add(content);                
+                componentsToHideLayout.add(content);
+                                
             }else{
                 Collection<Field<?>> fieldGroupFields = bfg.getFields();
                 for (Field<?> field : fieldGroupFields) {
@@ -125,10 +139,52 @@ public class ESIEditorView extends VerticalLayout implements
         }
     }
 
-
     public void showStyler() {
         for (Component c : componentsToHide) {
             c.setVisible(true);
         }
     }
+
+	@Override
+	public void buildForm(List<FieldGroup<EcosystemServiceIndicator>> fields) {
+		HtmlLabel spacer = new HtmlLabel("&nbsp;");
+		
+		for (FieldGroup<EcosystemServiceIndicator> fieldGroupMeta : fields) {
+
+			BeanFieldGroup<EcosystemServiceIndicator> bfg = fieldGroupMeta.getFieldGroup();
+            HtmlHeader c = new HtmlHeader(fieldGroupMeta.getLabel()); 
+            
+            if(fieldGroupMeta.getLabel() != ESIEditor.LAY_OUT) {
+            	mainPanel.addComponent(c);
+            }
+
+            if(fieldGroupMeta.getLabel() == ESIEditor.SPATIAL_DATA) {
+                componentsToToggle.add(c);
+                componentsToToggle.add(spacer);
+            }
+            if(fieldGroupMeta.getLabel() == ESIEditor.LAY_OUT) {
+            	fieldGroupMeta.setVisible(false);
+            	componentsToHideLayout.add(c);
+            	componentsToHideLayout.add(spacer);
+                for (Field<?> field : fieldGroupMeta.getFieldGroup().getFields()) {
+                	componentsToHideLayout.add(field);
+                }
+                Component content = ((StylerFieldGroup) fieldGroupMeta).getContent();
+                mainPanel.addComponent(content);
+                componentsToHideLayout.add(content); 
+            }else{
+                Collection<Field<?>> fieldGroupFields = bfg.getFields();
+                for (Field<?> field : fieldGroupFields) {
+                    mainPanel.addComponent(field);
+                    //If it's invisible already, it should always be invisible
+                    if(fieldGroupMeta.getLabel() == ESIEditor.SPATIAL_DATA && field.isVisible()) {
+                        componentsToToggle.add(field);
+                    }
+                }
+
+                mainPanel.addComponent(spacer);
+            }
+        }
+		
+	}
 }

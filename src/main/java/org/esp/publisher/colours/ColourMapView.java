@@ -51,4 +51,11 @@ public class ColourMapView extends VerticalLayout implements
     public SubmitPanel getBottomSubmitPanel() {
         return sb;
     }
+
+
+	@Override
+	public void buildForm(List<FieldGroup<ColourMap>> fields, boolean isInspire) {
+		// TODO Auto-generated method stub
+		
+	}
 }

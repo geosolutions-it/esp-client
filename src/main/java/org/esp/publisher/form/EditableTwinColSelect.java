@@ -2,11 +2,14 @@ package org.esp.publisher.form;
 
 import it.jrc.form.component.FormConstants;
 import it.jrc.form.controller.EditorController;
+import it.jrc.form.controller.EditorController.DeleteCompleteListener;
 import it.jrc.form.controller.EditorController.EditCompleteListener;
 import it.jrc.persist.Dao;
 
 import java.util.List;
 import java.util.Set;
+
+import javax.persistence.metamodel.SingularAttribute;
 
 import com.vaadin.data.Property;
 import com.vaadin.ui.Component;
@@ -48,8 +51,10 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
         }
     }
 
-    public EditableTwinColSelect(final Class<T> clazz, Dao dao) {
+    private  SingularAttribute<?, ?> orderBy = null;
+    public EditableTwinColSelect(final Class<T> clazz, Dao dao, SingularAttribute<?, ?> orderBy) {
 
+        this.orderBy = orderBy;
         this.clazz = clazz;
         this.dao = dao;
 
@@ -69,7 +74,7 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
 
         combo.setImmediate(true);
 
-        populateCombo();
+        populateCombo(orderBy);
 
         combo.addValueChangeListener(new Property.ValueChangeListener() {
 
@@ -123,6 +128,16 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
 
             }
         });
+        
+        editor.addDeleteCompleteListener(new DeleteCompleteListener<T>() {
+
+			@Override
+			public void onDeleteComplete(T entity) {
+				combo.removeAllItems();
+		        populateCombo(orderBy);
+			}
+        	
+		});
     }
 
     @Override
@@ -131,8 +146,13 @@ public class EditableTwinColSelect<T> extends CustomField<Set> {
         super.setInternalValue(newValue);
     }
 
-    protected void populateCombo() {
-        List<T> items = dao.all(clazz);
+    protected void populateCombo(SingularAttribute<?, ?> orderBy) {
+    	List<T> items = null; 
+    	if(orderBy!= null) {
+    		items = dao.all(clazz,orderBy);
+    	} else{
+    		items = dao.all(clazz);
+    	}
         for (T t : items) {
             combo.addItem(t);
         }

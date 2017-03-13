@@ -1,5 +1,6 @@
 package org.esp.publisher.form;
 
+import it.geosolutions.geonetwork.GN3Client;
 import it.geosolutions.geonetwork.GNClient;
 import it.geosolutions.geonetwork.exception.GNLibException;
 import it.geosolutions.geonetwork.exception.GNServerException;
@@ -46,20 +47,30 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.mail.EmailException;
 import org.esp.domain.blueprint.ArealUnit_;
+import org.esp.domain.blueprint.Biome_;
 import org.esp.domain.blueprint.DataSource;
 import org.esp.domain.blueprint.DataSource_;
 import org.esp.domain.blueprint.EcosystemService;
+import org.esp.domain.blueprint.EcosystemServiceAccountingType_;
+import org.esp.domain.blueprint.EcosystemServiceBenefitType;
+import org.esp.domain.blueprint.EcosystemServiceBenefitType_;
 import org.esp.domain.blueprint.EcosystemServiceIndicator;
 import org.esp.domain.blueprint.EcosystemServiceIndicator_;
 import org.esp.domain.blueprint.EcosystemService_;
 import org.esp.domain.blueprint.Indicator;
 import org.esp.domain.blueprint.Indicator_;
+import org.esp.domain.blueprint.InspireTheme;
+import org.esp.domain.blueprint.InspireTheme_;
+import org.esp.domain.blueprint.MappingUnit_;
 import org.esp.domain.blueprint.PublishStatus;
 import org.esp.domain.blueprint.QuantificationMethod;
+import org.esp.domain.blueprint.QuantificationMethod_;
 import org.esp.domain.blueprint.QuantificationUnit_;
 import org.esp.domain.blueprint.SpatialDataType;
+import org.esp.domain.blueprint.SpatialLevel_;
 import org.esp.domain.blueprint.Status;
 import org.esp.domain.blueprint.Study;
+import org.esp.domain.blueprint.StudyObjectiveMet_;
 import org.esp.domain.blueprint.TemporalUnit_;
 import org.esp.domain.publisher.ColourMap;
 import org.esp.publisher.ESPClientUploadField;
@@ -74,9 +85,11 @@ import org.esp.publisher.UnknownCRSException;
 import org.esp.publisher.colours.ColourMapFieldGroup.ColourMapAttributeChangeListener;
 import org.esp.publisher.styler.StylerFieldGroup;
 import org.esp.publisher.styler.StylerFieldGroup.StyleChangeListener;
+import org.esp.publisher.ui.NavMenu;
 import org.esp.publisher.ui.ViewModule;
 import org.esp.server.FileService;
 import org.esp.server.MailService;
+import org.hibernate.LazyInitializationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vaadin.addon.leaflet.LMap;
@@ -89,10 +102,13 @@ import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.Property.ValueChangeListener;
 import com.vaadin.data.util.converter.Converter;
 import com.vaadin.data.util.converter.StringToIntegerConverter;
+import com.vaadin.server.ExternalResource;
+import com.vaadin.server.ThemeResource;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.ComboBox;
 import com.vaadin.ui.Field;
+import com.vaadin.ui.Link;
 import com.vaadin.ui.Notification;
 import com.vaadin.ui.Notification.Type;
 import com.vaadin.ui.TextArea;
@@ -106,15 +122,14 @@ import com.vividsolutions.jts.geom.Polygon;
 
 public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 
+	public static final String SAVE_MESSAGE = "Thank you for submitting the data. The data set and the metadata will be reviewed and we keep you informed about the final publication. If we have questions, we will contact you by email.";
 	public static final String THE_ECOSYSTEM_SERVICE = "The Ecosystem Service";
 	public static final String SPATIAL_DATA_TYPE = "Spatial Data Type";
 	public static final String SPATIAL_DATA = "Geospatial data";
 	public static final String LAY_OUT = "Lay-out";
-	public static final String INSPIRE = "Inpire required Metadata";
-	private static final Long TEMPORARY_STATUS = PublishStatus.TEMPORARY
-			.getValue();
-	private static final Long NOT_VALIDATED_STATUS = PublishStatus.NOT_VALIDATED
-			.getValue();
+	public static final String INSPIRE = "Inspire required Metadata";
+	private static final Long TEMPORARY_STATUS = PublishStatus.TEMPORARY.getValue();
+	private static final Long NOT_VALIDATED_STATUS = PublishStatus.NOT_VALIDATED.getValue();
 
 	private Logger logger = LoggerFactory.getLogger(ESIEditor.class);
 
@@ -166,13 +181,14 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	private Study dummyStudy;
 	private FileService fileService;
 	private static List<String> inspireGroups = new ArrayList<String>();
-	
+
+	private String mail_to;
 	private String geonetworkUrl;
 	private String geonetworkUser;
 	private String geonetworkPassword;
-	
+
 	private MailService mailService;
-	
+
 	static {
 		inspireGroups.add(INSPIRE);
 	}
@@ -216,8 +232,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	private ValueChangeListener quantificationMethodListener = new ValueChangeListener() {
 		@Override
 		public void valueChange(ValueChangeEvent event) {
-			QuantificationMethod method = (QuantificationMethod) event
-					.getProperty().getValue();
+			QuantificationMethod method = (QuantificationMethod) event.getProperty().getValue();
 			inspireLineage.setValue(method.getLabel());
 		}
 	};
@@ -241,8 +256,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		public void valueChange(ValueChangeEvent event) {
 			String reference = (String) event.getProperty().getValue();
 			if (reference != null) {
-				Matcher m = spatialReferenceSearch.matcher(reference.replace(
-						"\n", "").replace("\r", ""));
+				Matcher m = spatialReferenceSearch.matcher(reference.replace("\n", "").replace("\r", ""));
 				if (m.matches()) {
 					inspireCrs.setValue(m.group(1));
 				}
@@ -252,25 +266,19 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		}
 	};
 
-
 	@Inject
-	public ESIEditor(Dao dao, RoleManager roleManager, GeoserverRestApi gsr,
-			FileService fileService, MailService mailService,
-			@Named("geotiff_limit_mb") int geotiffSizeLimit,
-			@Named("shapefile_limit_mb") int shapefileSizeLimit,
-			@Named("shapefile_limit_records") int shapefileRecordsLimit,
-			@Named("gn_url") String geonetworkUrl,
-			@Named("gn_user") String geonetworkUser,
-			@Named("gn_password") String geonetworkPassword
-			) {
+	public ESIEditor(Dao dao, RoleManager roleManager, GeoserverRestApi gsr, FileService fileService, MailService mailService, @Named("geotiff_limit_mb") int geotiffSizeLimit,
+			@Named("shapefile_limit_mb") int shapefileSizeLimit, @Named("shapefile_limit_records") int shapefileRecordsLimit, @Named("gn_url") String geonetworkUrl,
+			@Named("gn_user") String geonetworkUser, @Named("gn_password") String geonetworkPassword, @Named("mail_to") String mail_to) {
 
 		super(EcosystemServiceIndicator.class, dao);
 		this.mailService = mailService;
-		
+
 		this.geonetworkUrl = geonetworkUrl;
+		this.mail_to = mail_to;
 		this.geonetworkUser = geonetworkUser;
 		this.geonetworkPassword = geonetworkPassword;
-		
+
 		dummyIndicator = dao.find(Indicator.class, 0l);
 		dummyEcosystemService = dao.find(EcosystemService.class, 0l);
 		dummyStudy = dao.find(Study.class, 0l);
@@ -304,11 +312,8 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 			/*
 			 * Unpublish layers and styles
 			 */
-			TypedQuery<EcosystemServiceIndicator> tq = dao
-					.getEntityManager()
-					.createQuery(
-							"SELECT es FROM EcosystemServiceIndicator es WHERE es.status.id = :temporary AND es.dateCreated < :yesterday",
-							EcosystemServiceIndicator.class);
+			TypedQuery<EcosystemServiceIndicator> tq = dao.getEntityManager().createQuery("SELECT es FROM EcosystemServiceIndicator es WHERE es.status.id = :temporary AND es.dateCreated < :yesterday",
+					EcosystemServiceIndicator.class);
 			tq.setParameter("temporary", TEMPORARY_STATUS);
 			tq.setParameter("yesterday", DateUtils.addDays(new Date(), -1));
 			List<EcosystemServiceIndicator> results = tq.getResultList();
@@ -320,10 +325,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 			/*
 			 * Delete entities
 			 */
-			Query q = dao
-					.getEntityManager()
-					.createQuery(
-							"DELETE FROM EcosystemServiceIndicator es WHERE es.status.id = :temporary AND es.dateCreated < :yesterday");
+			Query q = dao.getEntityManager().createQuery("DELETE FROM EcosystemServiceIndicator es WHERE es.status.id = :temporary AND es.dateCreated < :yesterday");
 			q.setParameter("temporary", TEMPORARY_STATUS);
 			q.setParameter("yesterday", DateUtils.addDays(new Date(), -1));
 			q.executeUpdate();
@@ -336,45 +338,37 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 
 	private void buildInspireForm() {
 		/*
-		 * ff.addField(EcosystemServiceIndicator_.ecosystemServiceAccountingType)
-		 * ;
+		 * ff.addField(EcosystemServiceIndicator_.ecosystemServiceAccountingType) ;
 		 * ff.addField(EcosystemServiceIndicator_.ecosystemServiceBenefitType);
 		 * 
 		 * addFieldGroup("Accounting");
 		 * 
-		 * getFieldWithPopup(EcosystemServiceIndicator_.quantificationUnit,
-		 * QuantificationUnit_.label,
+		 * getFieldWithPopup(EcosystemServiceIndicator_.quantificationUnit, QuantificationUnit_.label,
 		 * QuantificationUnit_.quantificationUnitCategory);
 		 * 
-		 * getFieldWithPopup(EcosystemServiceIndicator_.arealUnit,
-		 * ArealUnit_.label);
-		 * getFieldWithPopup(EcosystemServiceIndicator_.temporalUnit,
+		 * getFieldWithPopup(EcosystemServiceIndicator_.arealUnit, ArealUnit_.label); getFieldWithPopup(EcosystemServiceIndicator_.temporalUnit,
 		 * TemporalUnit_.label);
 		 */
 		inspireTitle = ff.addTextField(EcosystemServiceIndicator_.inspireTitle);
 		inspireTitle.setCaption("Title");
-		inspireAbstract = ff
-				.addTextArea(EcosystemServiceIndicator_.inspireAbstract);
+		inspireAbstract = ff.addTextArea(EcosystemServiceIndicator_.inspireAbstract);
 		inspireAbstract.setCaption("Abstract");
 		ff.addField(EcosystemServiceIndicator_.inspireTopicCategory).setCaption("Topic Category");
-		inspireLanguage = ff
-				.addTextField(EcosystemServiceIndicator_.inspireLanguage);
+		inspireLanguage = ff.addTextField(EcosystemServiceIndicator_.inspireLanguage);
 		inspireLanguage.setCaption("Language");
 		inspireLanguage.setVisible(false);
 		inspireStartYear = new YearField();
-		ff.addField(EcosystemServiceIndicator_.inspireStartYear,
-				inspireStartYear);
+		ff.addField(EcosystemServiceIndicator_.inspireStartYear, inspireStartYear);
 		inspireStartYear.setCaption("Start Year/Temporal Extent Begin Date");
 		inspireEndYear = new YearField();
 		ff.addField(EcosystemServiceIndicator_.inspireEndYear, inspireEndYear);
 		inspireEndYear.setCaption("End Year/Temporal Extent End Date");
-		inspireResourceConstraints = ff
-				.addTextField(EcosystemServiceIndicator_.inspireResourceConstraints);
+		inspireResourceConstraints = ff.addTextField(EcosystemServiceIndicator_.inspireResourceConstraints);
 		inspireResourceConstraints.setCaption("Constraints");
-		inspireLineage = ff
-				.addTextField(EcosystemServiceIndicator_.inspireLineage);
+		inspireLineage = ff.addTextField(EcosystemServiceIndicator_.inspireLineage);
 		inspireLineage.setCaption("Lineage/Quality Info");
-		ff.addField(EcosystemServiceIndicator_.inspireTheme).setCaption("Theme");;
+		ff.addField(EcosystemServiceIndicator_.inspireTheme, InspireTheme_.theme).setCaption("Theme");
+		;
 		inspireCrs = ff.addTextField(EcosystemServiceIndicator_.inspireCrs);
 		inspireCrs.setCaption("Reference System");
 		ff.addField(EcosystemServiceIndicator_.inspireOwnerName).setCaption("Point of contact: Owner Name");
@@ -403,7 +397,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		esiEditorViewTab2 = (ESIEditorView) view;
 
 		List<FieldGroup<EcosystemServiceIndicator>> fieldGroups = getInspireFieldGroups();
-		view.buildForm(fieldGroups);
+		view.buildForm(fieldGroups, true);
 
 		buildSubmitPanel(view.getTopSubmitPanel());
 		buildSubmitPanel(view.getBottomSubmitPanel());
@@ -411,8 +405,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 
 	@Override
 	protected List<FieldGroup<EcosystemServiceIndicator>> getFieldGroups() {
-		List<FieldGroup<EcosystemServiceIndicator>> allGroups = super
-				.getFieldGroups();
+		List<FieldGroup<EcosystemServiceIndicator>> allGroups = super.getFieldGroups();
 		List<FieldGroup<EcosystemServiceIndicator>> filteredGroups = new ArrayList<FieldGroup<EcosystemServiceIndicator>>();
 		for (FieldGroup<EcosystemServiceIndicator> group : allGroups) {
 			if (!isForInspire(group)) {
@@ -428,8 +421,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	}
 
 	protected List<FieldGroup<EcosystemServiceIndicator>> getInspireFieldGroups() {
-		List<FieldGroup<EcosystemServiceIndicator>> allGroups = super
-				.getFieldGroups();
+		List<FieldGroup<EcosystemServiceIndicator>> allGroups = super.getFieldGroups();
 		List<FieldGroup<EcosystemServiceIndicator>> filteredGroups = new ArrayList<FieldGroup<EcosystemServiceIndicator>>();
 		for (FieldGroup<EcosystemServiceIndicator> group : allGroups) {
 			if (isForInspire(group)) {
@@ -443,10 +435,8 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	@Override
 	public void doUpdate(EcosystemServiceIndicator entity) {
 		removeSynchronizers();
-		if (!roleManager.isOwner(entity)
-				&& !roleManager.getRole().getIsSuperUser()) {
-			Notification.show("You do not have permission to edit this.",
-					Type.ERROR_MESSAGE);
+		if (!roleManager.isOwner(entity) && !roleManager.getRole().getIsSuperUser()) {
+			Notification.show("You do not have permission to edit this.", Type.ERROR_MESSAGE);
 			UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME);
 			return;
 		}
@@ -460,19 +450,18 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		}
 		super.doUpdate(entity);
 		esiEditorViewTab1.setNewStatus(false);
+		esiEditorViewTab1.setNewStatusLayout(true);
 		SpatialDataPublisher filePublisher = getFilePublisher();
 		Map<String, Class<?>> attributes;
 		try {
 			String layerName = entity.getLayerName();
 			if (layerName != null) {
 				attributes = filePublisher.getAttributes(layerName);
-				String attributesInfo = filePublisher
-						.getAttributesInfo(layerName);
+				String attributesInfo = filePublisher.getAttributesInfo(layerName);
 				String symbolType = filePublisher.getGeometryType(layerName);
 				stylerFieldGroup.startUpdate();
 				updateUIStyle(layerName, attributesInfo, symbolType);
-				stylerFieldGroup.initStyler(attributes,
-						entity.getAttributeName());
+				stylerFieldGroup.initStyler(attributes, entity.getAttributeName());
 				stylerFieldGroup.endUpdate();
 			} else {
 				stylerFieldGroup.updateUI(entity);
@@ -483,9 +472,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				stylerFieldGroup.setVectorMode();
 			}
 		} catch (PublishException e) {
-			Notification
-					.show("Error getting attributes for the layer: "
-							+ e.getMessage(), Type.ERROR_MESSAGE);
+			Notification.show("Error getting attributes for the layer: " + e.getMessage(), Type.ERROR_MESSAGE);
 		}
 
 		uploadField.updateSpatialDataType(entity.getSpatialDataType());
@@ -504,6 +491,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		 * Clear form
 		 */
 		esiEditorViewTab1.setNewStatus(true);
+		esiEditorViewTab1.setNewStatusLayout(false);
 		super.doCreate();
 
 		EcosystemServiceIndicator entity = getEntity();
@@ -515,8 +503,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		stylerFieldGroup.setDefaultValues();
 
 		inspireLanguage.setValue("Eng");
-		inspireResourceConstraints
-				.setValue("Ask for permission from data owner");
+		inspireResourceConstraints.setValue("Ask for permission from data owner");
 		addSynchronizers();
 	}
 
@@ -541,40 +528,35 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		/*
 		 * The service
 		 */
-		ecosystemServiceField = getFieldWithoutPopup(
-				"SELECT es FROM EcosystemService es WHERE es > 0",
-				EcosystemServiceIndicator_.ecosystemService,
-				EcosystemService_.label);
+		ecosystemServiceField = getFieldWithoutPopup("SELECT es FROM EcosystemService es WHERE es > 0 order by label", EcosystemServiceIndicator_.ecosystemService, EcosystemService_.label);
 
-		ff.addField(EcosystemServiceIndicator_.ecosystemService,
-				ecosystemServiceField);
+		ff.addField(EcosystemServiceIndicator_.ecosystemService, ecosystemServiceField);
 		/*
 		 * The indicator
 		 */
-		indicatorField = getFieldWithPopup(
-				"SELECT i FROM Indicator i WHERE i.id > 0",
-				EcosystemServiceIndicator_.indicator, Indicator_.label);
+		indicatorField = getFieldWithPopup("SELECT i FROM Indicator i WHERE i.id > 0 order by label", EcosystemServiceIndicator_.indicator, Indicator_.label);
 		/*
 		 * The study
 		 */
-		studyField = new EditableCombo<Study>(Study.class, dao,
-				"SELECT s FROM Study s WHERE s.id > 0");
+		studyField = new EditableCombo<Study>(Study.class, dao, "SELECT s FROM Study s WHERE s.id > 0 order by study_name");
 
 		InlineStudyEditor studyEditor = new InlineStudyEditor(dao, roleManager);
 		studyField.setEditor(studyEditor);
 		studyEditor.init(new DefaultEditorView<Study>());
 		ff.addField(EcosystemServiceIndicator_.study, studyField);
 
-		spatialDataTypeField = (ComboBox) ff
-				.addField(EcosystemServiceIndicator_.spatialDataType);
+		/*
+		 * spatial data type
+		 */
+
+		spatialDataTypeField = (ComboBox) ff.addField(EcosystemServiceIndicator_.spatialDataType);
 		spatialDataTypeField.addValueChangeListener(new ValueChangeListener() {
 			public void valueChange(ValueChangeEvent event) {
 				Object value = event.getProperty().getValue();
-				getEntity().setSpatialDataType(
-						value != null ? (SpatialDataType) value : null);
-				uploadField.updateSpatialDataType(getEntity()
-						.getSpatialDataType());
-				esiEditorViewTab1.setNewStatus(value == null);
+				getEntity().setSpatialDataType(value != null ? (SpatialDataType) value : null);
+
+				uploadField.updateSpatialDataType(getEntity().getSpatialDataType());
+				esiEditorViewTab1.setNewStatus(value == null); // isNew : value == null
 			}
 		});
 		spatialDataTypeField.setImmediate(true);
@@ -593,6 +575,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				File f = (File) event.getProperty().getValue();
 				if (f == null) {
 					showError("File has not been correctly upload.");
+					esiEditorViewTab1.setNewStatusLayout(false);
 				} else if (uploadField.checkLimits(f)) {
 
 					// boolean success = ESIEditor.this.isFormValid();
@@ -602,13 +585,16 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 					// }
 					//
 					// Preconditions.checkArgument(f != null,
-					// "Where is the file?");
+					// "Where is the file?")
+					esiEditorViewTab1.setNewStatusLayout(true);
 					publishFile(f);
 				}
 			}
 
 		});
-
+		if (uploadField.getFile() != null) {
+			esiEditorViewTab1.setNewStatusLayout(true);
+		}
 		ff.addField("file", uploadField);
 
 		stylerFieldGroup = new StylerFieldGroup(LAY_OUT, dao);
@@ -616,25 +602,18 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		stylerFieldGroup.setUpdateStyleListener(new StyleChangeListener() {
 
 			@Override
-			public void onValueChanged(ColourMap colourMap,
-					String attributeName, String classificationMethod,
-					int intervalsNumber, String SLD) {
+			public void onValueChanged(ColourMap colourMap, String attributeName, String classificationMethod, int intervalsNumber, String SLD) {
 				updateStyle(stylerFieldGroup);
 
 			}
 
 			@Override
-			public void onClassify(ColourMap colourMap, String attributeName,
-					String classificationMethod, int intervalsNumber) {
+			public void onClassify(ColourMap colourMap, String attributeName, String classificationMethod, int intervalsNumber) {
 				try {
 					SpatialDataPublisher filePublisher = getFilePublisher();
 					String layerName = getLayerName();
-					String sld = normalizeSLD(filePublisher.classify(layerName,
-							attributeName, classificationMethod,
-							intervalsNumber, colourMap));
-					stylerFieldGroup.updateStyle(layerName, sld,
-							filePublisher.getGeometryType(layerName),
-							filePublisher.getAttributesInfo(layerName), true);
+					String sld = normalizeSLD(filePublisher.classify(layerName, attributeName, classificationMethod, intervalsNumber, colourMap));
+					stylerFieldGroup.updateStyle(layerName, sld, filePublisher.getGeometryType(layerName), filePublisher.getAttributesInfo(layerName), true);
 				} catch (PublishException e) {
 					showError("Error get classified style: " + e.getMessage());
 				}
@@ -647,28 +626,24 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 			}
 		});
 
-		stylerFieldGroup
-				.setAttributeListener(new ColourMapAttributeChangeListener() {
+		stylerFieldGroup.setAttributeListener(new ColourMapAttributeChangeListener() {
 
-					@Override
-					public void onValueChanged(String attributeName,
-							Class<?> attributeType) {
-						if (getLayerName() != null) {
-							if (!updateExtrema(getLayerName(), attributeName,
-									attributeType)) {
-								showError("Unable to update min - max values");
-							}
-
-						}
+			@Override
+			public void onValueChanged(String attributeName, Class<?> attributeType) {
+				if (getLayerName() != null) {
+					if (!updateExtrema(getLayerName(), attributeName, attributeType)) {
+						showError("Unable to update min - max values");
 					}
-				});
+
+				}
+			}
+		});
 
 		this.sridField = ff.addTextField(EcosystemServiceIndicator_.srid);
 		sridField.setVisible(false);
 		sridField.setConverter(new StringToIntegerConverter());
 
-		spatialReferenceInfoField = ff
-				.addTextArea(EcosystemServiceIndicator_.spatialReferenceInfo);
+		spatialReferenceInfoField = ff.addTextArea(EcosystemServiceIndicator_.spatialReferenceInfo);
 
 		spatialReferenceInfoField.setReadOnly(true);
 
@@ -690,10 +665,8 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		comments.removeValueChangeListener(commentsListener);
 		startYear.removeValueChangeListener(startYearListener);
 		endYear.removeValueChangeListener(endYearListener);
-		quantificationMethod
-				.removeValueChangeListener(quantificationMethodListener);
-		spatialReferenceInfoField
-				.removeValueChangeListener(spatialReferenceListener);
+		quantificationMethod.removeValueChangeListener(quantificationMethodListener);
+		spatialReferenceInfoField.removeValueChangeListener(spatialReferenceListener);
 	}
 
 	private void addSynchronizers() {
@@ -702,16 +675,13 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		comments.addValueChangeListener(commentsListener);
 		startYear.addValueChangeListener(startYearListener);
 		endYear.addValueChangeListener(endYearListener);
-		quantificationMethod
-				.addValueChangeListener(quantificationMethodListener);
-		spatialReferenceInfoField
-				.addValueChangeListener(spatialReferenceListener);
+		quantificationMethod.addValueChangeListener(quantificationMethodListener);
+		spatialReferenceInfoField.addValueChangeListener(spatialReferenceListener);
 	}
 
 	protected void updateInspireTitle(Study study, Indicator indicator) {
 		if (study != null && indicator != null) {
-			inspireTitle.setValue(study.getStudyName() + " ("
-					+ indicator.getLabel() + ")");
+			inspireTitle.setValue(study.getStudyName() + " (" + indicator.getLabel() + ")");
 		}
 
 	}
@@ -726,26 +696,13 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		String layerName = getLayerName();
 		String prefix = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 		prefix += "<sld:StyledLayerDescriptor xmlns=\"http://www.opengis.net/sld\" xmlns:sld=\"http://www.opengis.net/sld\" xmlns:ogc=\"http://www.opengis.net/ogc\" xmlns:gml=\"http://www.opengis.net/gml\" version=\"1.0.0\">";
-		prefix += "<sld:NamedLayer><sld:Name>" + layerName
-				+ "</sld:Name><sld:UserStyle><sld:Name>" + layerName
-				+ "</sld:Name><sld:Title>" + layerName + "</sld:Title>";
-		prefix += "<sld:Abstract>"
-				+ layerName
-				+ "</sld:Abstract><sld:FeatureTypeStyle><sld:Name>name</sld:Name>";
+		prefix += "<sld:NamedLayer><sld:Name>" + layerName + "</sld:Name><sld:UserStyle><sld:Name>" + layerName + "</sld:Name><sld:Title>" + layerName + "</sld:Title>";
+		prefix += "<sld:Abstract>" + layerName + "</sld:Abstract><sld:FeatureTypeStyle><sld:Name>name</sld:Name>";
 
 		String postfix = "</sld:FeatureTypeStyle></sld:UserStyle></sld:NamedLayer></sld:StyledLayerDescriptor>";
-		return prefix
-				+ sld.replace("\n", "").replace("\r", "")
-						.replace("<Filter>", "<ogc:Filter>")
-						.replace("</Filter>", "</ogc:Filter>")
-						.replace("<Literal>", "<ogc:Literal>")
-						.replace("</Literal>", "</ogc:Literal>")
-						.replace("<PropertyName>", "<ogc:PropertyName>")
-						.replace("</PropertyName>", "</ogc:PropertyName>")
-						.replace("<PropertyIs", "<ogc:PropertyIs")
-						.replace("</PropertyIs", "</ogc:PropertyIs")
-						.replace("<And>", "<ogc:And>")
-						.replace("</And>", "</ogc:And>") + postfix;
+		return prefix + sld.replace("\n", "").replace("\r", "").replace("<Filter>", "<ogc:Filter>").replace("</Filter>", "</ogc:Filter>").replace("<Literal>", "<ogc:Literal>")
+				.replace("</Literal>", "</ogc:Literal>").replace("<PropertyName>", "<ogc:PropertyName>").replace("</PropertyName>", "</ogc:PropertyName>").replace("<PropertyIs", "<ogc:PropertyIs")
+				.replace("</PropertyIs", "</ogc:PropertyIs").replace("<And>", "<ogc:And>").replace("</And>", "</ogc:And>") + postfix;
 	}
 
 	/**
@@ -756,11 +713,9 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	 * @return
 	 * @throws PublishException
 	 */
-	private boolean updateStyle(String styleName, StylingMetadata metadata)
-			throws PublishException {
+	private boolean updateStyle(String styleName, StylingMetadata metadata) throws PublishException {
 		SpatialDataPublisher filePublisher = getFilePublisher();
-		return filePublisher.updateStyle(styleName,
-				filePublisher.getDefaultStyleTemplate(), metadata);
+		return filePublisher.updateStyle(styleName, filePublisher.getDefaultStyleTemplate(), metadata);
 	}
 
 	/**
@@ -771,14 +726,12 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	 * @return
 	 * @throws PublishException
 	 */
-	private void updateUIStyle(String styleName, String attributes,
-			String symbolType) throws PublishException {
+	private void updateUIStyle(String styleName, String attributes, String symbolType) throws PublishException {
 		SpatialDataPublisher filePublisher = getFilePublisher();
 		String style = filePublisher.getPublishedStyle(styleName);
 
 		if (style != null) {
-			stylerFieldGroup.updateStyle(styleName, style, symbolType,
-					attributes, false);
+			stylerFieldGroup.updateStyle(styleName, style, symbolType, attributes, false);
 		}
 	}
 
@@ -793,26 +746,22 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 
 	private void buildMetaForm() {
 
-		ff.addField(EcosystemServiceIndicator_.ecosystemServiceAccountingType);
-		ff.addField(EcosystemServiceIndicator_.ecosystemServiceBenefitType);
+		ff.addField(EcosystemServiceIndicator_.ecosystemServiceAccountingType, EcosystemServiceAccountingType_.label);
+		ff.addField(EcosystemServiceIndicator_.ecosystemServiceBenefitType, EcosystemServiceBenefitType_.label);
 
 		addFieldGroup("Accounting");
 
-		getFieldWithPopup(EcosystemServiceIndicator_.quantificationUnit,
-				QuantificationUnit_.label,
-				QuantificationUnit_.quantificationUnitCategory);
+		getFieldWithPopup(EcosystemServiceIndicator_.quantificationUnit, QuantificationUnit_.label, QuantificationUnit_.quantificationUnitCategory);
 
-		getFieldWithPopup(EcosystemServiceIndicator_.arealUnit,
-				ArealUnit_.label);
-		getFieldWithPopup(EcosystemServiceIndicator_.temporalUnit,
-				TemporalUnit_.label);
+		getFieldWithPopup(EcosystemServiceIndicator_.arealUnit, ArealUnit_.label);
+		getFieldWithPopup(EcosystemServiceIndicator_.temporalUnit, TemporalUnit_.label);
 
 		addFieldGroup("Quantification");
 		startYear = new YearField();
 		ff.addField(EcosystemServiceIndicator_.startYear, startYear);
 		endYear = new YearField();
 		ff.addField(EcosystemServiceIndicator_.endYear, endYear);
-		ff.addField(EcosystemServiceIndicator_.spatialLevel);
+		ff.addField(EcosystemServiceIndicator_.spatialLevel, SpatialLevel_.label);
 
 		// Quick hack to get a filtered TwinColSelect
 		TwinColSelect groupingField = new TwinColSelect();
@@ -829,14 +778,11 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 
 		addFieldGroup("Spatio-temporal");
 
-		quantificationMethod = (Field<QuantificationMethod>) ff
-				.addField(EcosystemServiceIndicator_.quantificationMethod);
+		quantificationMethod = (Field<QuantificationMethod>) ff.addField(EcosystemServiceIndicator_.quantificationMethod, QuantificationMethod_.label);
 
 		{
-			EditableTwinColSelect<DataSource> dataSourceField = new EditableTwinColSelect<DataSource>(
-					DataSource.class, dao);
-			dataSourceField.setEditor(new EditorController<DataSource>(
-					DataSource.class, dao) {
+			EditableTwinColSelect<DataSource> dataSourceField = new EditableTwinColSelect<DataSource>(DataSource.class, dao, DataSource_.name);
+			dataSourceField.setEditor(new EditorController<DataSource>(DataSource.class, dao) {
 				{
 					ff.addField(DataSource_.name);
 					ff.addField(DataSource_.url);
@@ -850,31 +796,27 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		addFieldGroup("Model and data");
 
 		ff.addField(EcosystemServiceIndicator_.minimumMappingUnit);
-		ff.addField(EcosystemServiceIndicator_.minimumMappingUnitUom);
+		// remove the next comment to show the minimumMappingUnitUom field
+		// ff.addField(EcosystemServiceIndicator_.minimumMappingUnitUom, MappingUnit_.uom);
 
 		addFieldGroup("Spatial data");
 
-		ff.addField(EcosystemServiceIndicator_.biomes);
+		ff.addField(EcosystemServiceIndicator_.biomes, Biome_.label);
 
-		ff.addField(EcosystemServiceIndicator_.studyObjectiveMet);
+		ff.addField(EcosystemServiceIndicator_.studyObjectiveMet, StudyObjectiveMet_.label);
 		comments = ff.addTextArea(EcosystemServiceIndicator_.comments);
 
 		addFieldGroup("Other");
 
 	}
 
-	public <X> Field<X> getFieldWithPopup(
-			Attribute<? extends EcosystemServiceIndicator, X> prop,
-			final SingularAttribute<X, ?>... childProps) {
+	public <X> Field<X> getFieldWithPopup(Attribute<? extends EcosystemServiceIndicator, X> prop, final SingularAttribute<X, ?>... childProps) {
 		return getFieldWithPopup("", prop, childProps);
 	}
 
-	public <X> Field<X> getFieldWithPopup(String query,
-			Attribute<? extends EcosystemServiceIndicator, X> prop,
-			final SingularAttribute<X, ?>... childProps) {
+	public <X> Field<X> getFieldWithPopup(String query, Attribute<? extends EcosystemServiceIndicator, X> prop, final SingularAttribute<X, ?>... childProps) {
 
-		EditableField<X> c = new EditableCombo<X>(prop.getJavaType(), dao,
-				query);
+		EditableField<X> c = new EditableCombo<X>(prop.getJavaType(), dao, query);
 		c.setEditor(new EditorController<X>(prop.getJavaType(), dao) {
 			{
 				for (int i = 0; i < childProps.length; i++) {
@@ -889,9 +831,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		return c;
 	}
 
-	public <X> Field<X> getFieldWithoutPopup(String query,
-			Attribute<? extends EcosystemServiceIndicator, X> prop,
-			final SingularAttribute<X, ?>... childProps) {
+	public <X> Field<X> getFieldWithoutPopup(String query, Attribute<? extends EcosystemServiceIndicator, X> prop, final SingularAttribute<X, ?>... childProps) {
 
 		Field<X> c = new SimpleCombo<X>(prop.getJavaType(), dao, query);
 
@@ -909,13 +849,10 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		envelopeField.setConverter(new Converter<LinearRing, Polygon>() {
 
 			@Override
-			public Polygon convertToModel(LinearRing value,
-					Class<? extends Polygon> targetType, Locale locale)
-					throws com.vaadin.data.util.converter.Converter.ConversionException {
+			public Polygon convertToModel(LinearRing value, Class<? extends Polygon> targetType, Locale locale) throws com.vaadin.data.util.converter.Converter.ConversionException {
 				if (value != null) {
 
-					Polygon polygon = new Polygon(value, null,
-							new GeometryFactory());
+					Polygon polygon = new Polygon(value, null, new GeometryFactory());
 					polygon.setSRID(value.getSRID());
 					return polygon;
 				}
@@ -923,14 +860,11 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 			}
 
 			@Override
-			public LinearRing convertToPresentation(Polygon value,
-					Class<? extends LinearRing> targetType, Locale locale)
-					throws com.vaadin.data.util.converter.Converter.ConversionException {
+			public LinearRing convertToPresentation(Polygon value, Class<? extends LinearRing> targetType, Locale locale) throws com.vaadin.data.util.converter.Converter.ConversionException {
 
 				// It's guaranteed to be a LinearRing
 				if (value != null) {
-					LinearRing exteriorRing = (LinearRing) value
-							.getExteriorRing();
+					LinearRing exteriorRing = (LinearRing) value.getExteriorRing();
 					return exteriorRing;
 				}
 				return null;
@@ -998,8 +932,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	 * @param f
 	 */
 	private void publishFile(File f) {
-		SpatialDataType spatialDataType = (SpatialDataType) spatialDataTypeField
-				.getValue();
+		SpatialDataType spatialDataType = (SpatialDataType) spatialDataTypeField.getValue();
 
 		String layerName = getLayerName();
 		// new file
@@ -1018,8 +951,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	}
 
 	/**
-	 * Publish a new uploaded file of a specific data type with the given layer
-	 * name.
+	 * Publish a new uploaded file of a specific data type with the given layer name.
 	 * 
 	 * @param f
 	 * @param layerName
@@ -1028,9 +960,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	 * @throws PublishException
 	 * @throws IOException
 	 */
-	private void publishFile(File f, String layerName,
-			SpatialDataType spatialDataType) throws UnknownCRSException,
-			PublishException, IOException {
+	private void publishFile(File f, String layerName, SpatialDataType spatialDataType) throws UnknownCRSException, PublishException, IOException {
 		Long spatialDataTypeId = spatialDataType.getId();
 		// we use a different publisher for each kind of data type
 		// to take into account a different publishing workflow
@@ -1039,8 +969,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 
 		// extracts basic metadata from the uploaded file to store them in the
 		// EPS-Client database
-		PublishedFileMetadata metadata = filePublisher.extractMetadata(f,
-				layerName);
+		PublishedFileMetadata metadata = filePublisher.extractMetadata(f, layerName);
 		stylerFieldGroup.startUpdate();
 		// update UI with the extracted metadata (min - max, srs, etc.)
 		updateUIAfterPublish(metadata);
@@ -1060,9 +989,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				getEntity().setPixelSizeY(gtm.getPixelSizeY());
 			}
 
-			String styleName = filePublisher.createStyle(metadata, layerName,
-					filePublisher.getDefaultStyleTemplate(),
-					stylerFieldGroup.getDefaultColourMap());
+			String styleName = filePublisher.createStyle(metadata, layerName, filePublisher.getDefaultStyleTemplate(), stylerFieldGroup.getDefaultColourMap());
 
 			if (styleName != null) {
 				logger.info("Basic style created: " + styleName);
@@ -1073,26 +1000,21 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 					// some data types require the layer to be published before
 					// we can create the final style for it
 					if (filePublisher.supportsAdHocStyling()) {
-						if (updateStyle(layerName,
-								stylerFieldGroup.getBasicStyle())) {
+						if (updateStyle(layerName, stylerFieldGroup.getBasicStyle())) {
 							logger.info("Ad hoc style created");
 						} else {
-							throw new PublishException(
-									"Error creating ad hoc style");
+							throw new PublishException("Error creating ad hoc style");
 						}
 					}
-					String attributesInfo = filePublisher
-							.getAttributesInfo(layerName);
-					String symbolType = filePublisher
-							.getGeometryType(layerName);
+					String attributesInfo = filePublisher.getAttributesInfo(layerName);
+					String symbolType = filePublisher.getGeometryType(layerName);
 					updateUIStyle(styleName, attributesInfo, symbolType);
 					// Copy to temporary file
 					File tmpFile = File.createTempFile(f.getName(), ".tmp");
 					FileUtils.copyFile(f, tmpFile);
 					commitWithoutValidation("File saved");
 					// Persist source file
-					fileService.uploadFile(getEntity().getId(), layerName,
-							tmpFile, spatialDataType);
+					fileService.uploadFile(getEntity().getId(), layerName, tmpFile, spatialDataType);
 					firePublishEvent();
 					tmpFile.delete();
 
@@ -1116,15 +1038,14 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	}
 
 	protected void removeFromGeoNetwork(EcosystemServiceIndicator entity) throws IOException, GNLibException, GNServerException {
-		if(entity.getGeonetworkMetadataId() != null) {
-			GNClient client = new GNClient(geonetworkUrl, geonetworkUser, geonetworkPassword);
+		if (entity.getGeonetworkMetadataId() != null) {
+			GNClient client = new GN3Client(geonetworkUrl, geonetworkUser, geonetworkPassword);
 			client.deleteMetadata(entity.getGeonetworkMetadataId());
 		}
 	}
-	
+
 	/**
-	 * Updates the UI after a new layer has been updloaded and published.
-	 * Metadata extracted from the file is shown to the user.
+	 * Updates the UI after a new layer has been updloaded and published. Metadata extracted from the file is shown to the user.
 	 * 
 	 * @param metadata
 	 */
@@ -1144,10 +1065,8 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		stylerFieldGroup.setDefaultColorMap();
 		spatialReferenceInfoField.setValue(metadata.getDescription());
 
-		envelopeField.setValue((LinearRing) metadata.getEnvelope()
-				.getBoundary());
-		stylerFieldGroup.initStyler(metadata.getAttributes(),
-				metadata.getAttributeName());
+		envelopeField.setValue((LinearRing) metadata.getEnvelope().getBoundary());
+		stylerFieldGroup.initStyler(metadata.getAttributes(), metadata.getAttributeName());
 	}
 
 	private void showError(String message) {
@@ -1158,23 +1077,19 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	protected void doPostDelete(EcosystemServiceIndicator entity) {
 		try {
 			unpublishEntity(entity);
-			UI.getCurrent().getNavigator()
-					.navigateTo(ViewModule.HOME + "/reset");
-			
+			UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME);
+
 			try {
 				removeFromGeoNetwork(entity);
 			} catch (IOException e) {
-				logger.error(e.getMessage(),e);
-                Notification.show("Error removing metadata from GeoNetwork : " + e.getMessage(),
-                        Notification.Type.ERROR_MESSAGE);
+				logger.error(e.getMessage(), e);
+				Notification.show("Error removing metadata from GeoNetwork : " + e.getMessage(), Notification.Type.ERROR_MESSAGE);
 			} catch (GNLibException e) {
-				logger.error(e.getMessage(),e);
-                Notification.show("Error removing metadata from GeoNetwork : " + e.getMessage(),
-                        Notification.Type.ERROR_MESSAGE);
+				logger.error(e.getMessage(), e);
+				Notification.show("Error removing metadata from GeoNetwork : " + e.getMessage(), Notification.Type.ERROR_MESSAGE);
 			} catch (GNServerException e) {
-				logger.error(e.getMessage(),e);
-                Notification.show("Error connecting to GeoNetwork for metadata removing: " + e.getMessage(),
-                        Notification.Type.ERROR_MESSAGE);
+				logger.error(e.getMessage(), e);
+				Notification.show("Error connecting to GeoNetwork for metadata removing: " + e.getMessage(), Notification.Type.ERROR_MESSAGE);
 			}
 			super.doPostDelete(entity);
 		} catch (PublishException e) {
@@ -1185,23 +1100,19 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	}
 
 	/**
-	 * Removes all published objects related to an entity: layer, store, style,
-	 * db table.
+	 * Removes all published objects related to an entity: layer, store, style, db table.
 	 * 
 	 * @param entity
 	 * @throws PublishException
 	 * @throws IOException
 	 */
-	private void unpublishEntity(EcosystemServiceIndicator entity)
-			throws PublishException, IOException {
-		getFilePublisher(entity.getSpatialDataType().getId()).unpublish(
-				entity.getLayerName());
+	private void unpublishEntity(EcosystemServiceIndicator entity) throws PublishException, IOException {
+		getFilePublisher(entity.getSpatialDataType().getId()).unpublish(entity.getLayerName());
 		fileService.deleteFile(entity.getId(), entity.getLayerName());
 	}
 
 	private String generateLayerName() {
-		return "esp-layer-"
-				+ dao.getNextValueInSequence("blueprint.geoserver_layer");
+		return "esp-layer-" + dao.getNextValueInSequence("blueprint.geoserver_layer");
 	}
 
 	public void setPublishEventListener(LayerPublishedListener listener) {
@@ -1215,15 +1126,12 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		if (listener == null) {
 			logger.error("Null listener");
 		} else {
-			listener.onLayerPublished(getLayerName(),
-					getEntity().getEnvelope(), getEntity().getTimestamp());
+			listener.onLayerPublished(getLayerName(), getEntity().getEnvelope(), getEntity().getTimestamp());
 		}
 	}
 
-	private boolean updateExtrema(String layerName, String attributeName,
-			Class<?> attributeType) {
-		if (attributeType != null
-				&& Number.class.isAssignableFrom(attributeType)) {
+	private boolean updateExtrema(String layerName, String attributeName, Class<?> attributeType) {
+		if (attributeType != null && Number.class.isAssignableFrom(attributeType)) {
 			double[] extrema = gsr.getExtrema(layerName, attributeName);
 			if (extrema != null) {
 				Double minVal = extrema[0];
@@ -1274,8 +1182,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		}
 	}
 
-	private void commitWithoutValidation(String message)
-			throws PublishException {
+	private void commitWithoutValidation(String message) throws PublishException {
 		/*
 		 * Disable validation and store dummy values for empty fields
 		 */
@@ -1284,8 +1191,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 			indicatorField.setInvalidCommitted(true);
 		}
 		if (ecosystemServiceField.getValue() == null) {
-			ecosystemServiceField.getPropertyDataSource().setValue(
-					dummyEcosystemService);
+			ecosystemServiceField.getPropertyDataSource().setValue(dummyEcosystemService);
 			ecosystemServiceField.setInvalidCommitted(true);
 		}
 		if (studyField.getValue() == null) {
@@ -1329,8 +1235,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		/*
 		 * Submit panel
 		 */
-		Button commit = ButtonFactory.getButton(
-				ButtonFactory.SAVE_BUTTON_CAPTION, ButtonFactory.SAVE_ICON);
+		Button commit = ButtonFactory.getButton(ButtonFactory.SAVE_BUTTON_CAPTION, ButtonFactory.SAVE_ICON);
 		commit.setEnabled(containerManager.canUpdate());
 
 		commit.addClickListener(new Button.ClickListener() {
@@ -1340,42 +1245,56 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				 * Change form TEMPORARY to NOT VALIDATED
 				 */
 				Status preStatus = getEntity().getStatus();
-				getEntity().setStatus(
-						dao.find(Status.class, NOT_VALIDATED_STATUS));
+				getEntity().setStatus(dao.find(Status.class, NOT_VALIDATED_STATUS));
 				if (!commitForm(true)) {
 					getEntity().setStatus(preStatus);
+					
 				}
-				String message="New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName() + " has been uploaded";
-				String to = "joachim.maes@jrc.ec.europa.eu";
+				String message = "New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName()
+						+ " has been uploaded";
+
+				// old receiver were hard-coded
+				// String to = "joachim.maes@jrc.ec.europa.eu";
+				Notification.show(SAVE_MESSAGE);
+
+				// TODO REDIRECT to home
+				// window.href.location = "http://localhost:8090/esp-client/#!Home";
+				/*
+				try {*/
+				UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME);
+				/*} catch (LazyInitializationException e) {
+					e.printStackTrace();
+				}
+				*/
+					
+
 				try {
-					mailService.sendUploadedEmail(message, to);
+					mailService.sendUploadedEmail(message, mail_to);
 				} catch (EmailException e) {
 					showError("Error sending email: " + e.getMessage());
 				} catch (IOException e) {
 					showError("Error sending email: " + e.getMessage());
 				}
+
 			}
 		});
 
-		Button delete = ButtonFactory.getButton(
-				ButtonFactory.DELETE_BUTTON_CAPTION, ButtonFactory.DELETE_ICON);
+		Button delete = ButtonFactory.getButton(ButtonFactory.DELETE_BUTTON_CAPTION, ButtonFactory.DELETE_ICON);
 		delete.setEnabled(containerManager.canDelete());
 
 		delete.addClickListener(new Button.ClickListener() {
 			public void buttonClick(ClickEvent event) {
 
-				ConfirmDialog.show(UI.getCurrent(),
-						"Are you sure you wish to delete this record?",
-						new ConfirmDialog.Listener() {
+				ConfirmDialog.show(UI.getCurrent(), "Are you sure you wish to delete this record?", new ConfirmDialog.Listener() {
 
-							public void onClose(ConfirmDialog dialog) {
-								if (dialog.isConfirmed()) {
-									doDelete();
+					public void onClose(ConfirmDialog dialog) {
+						if (dialog.isConfirmed()) {
+							doDelete();
+							containerManager.refresh();
+						}
+					}
 
-								}
-							}
-
-						});
+				});
 			}
 		});
 

@@ -52,6 +52,7 @@ public class InlineStudyEditor extends EditorController<Study> {
     @Override
     protected void doPostDelete(Study entity) {
 
+    	fireDeleteComplete(entity);
 //        Set<EcosystemServiceIndicator> esis = entity
 //                .getEcosystemServiceIndicators();
 //        if (esis != null) {
