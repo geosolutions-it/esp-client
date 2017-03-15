@@ -33,6 +33,7 @@ mail_hostname=localhost
 mail_smtpport=27
 mail_username=test
 mail_password=test
+mail_to=receiver@esp-mapping.net
 mail_from=info@esp-mapping.net
 mail_fromname=ESP Mapping
 mailSSL=false
