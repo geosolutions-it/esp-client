@@ -30,6 +30,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -62,6 +63,7 @@ import org.esp.domain.blueprint.Indicator_;
 import org.esp.domain.blueprint.InspireTheme;
 import org.esp.domain.blueprint.InspireTheme_;
 import org.esp.domain.blueprint.MappingUnit_;
+import org.esp.domain.blueprint.Message;
 import org.esp.domain.blueprint.PublishStatus;
 import org.esp.domain.blueprint.QuantificationMethod;
 import org.esp.domain.blueprint.QuantificationMethod_;
@@ -368,7 +370,6 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		inspireLineage = ff.addTextField(EcosystemServiceIndicator_.inspireLineage);
 		inspireLineage.setCaption("Lineage/Quality Info");
 		ff.addField(EcosystemServiceIndicator_.inspireTheme, InspireTheme_.theme).setCaption("Theme");
-		;
 		inspireCrs = ff.addTextField(EcosystemServiceIndicator_.inspireCrs);
 		inspireCrs.setCaption("Reference System");
 		ff.addField(EcosystemServiceIndicator_.inspireOwnerName).setCaption("Point of contact: Owner Name");
@@ -511,7 +512,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	protected void doPreCommit(EcosystemServiceIndicator entity) {
 		entity.setRole(roleManager.getRole());
 		entity.setDateUpdated(Calendar.getInstance().getTime());
-
+		entity.setMessages(new HashSet<Message>());
 		stylerFieldGroup.preCommit(entity);
 
 	}
@@ -1077,7 +1078,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	protected void doPostDelete(EcosystemServiceIndicator entity) {
 		try {
 			unpublishEntity(entity);
-			UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME);
+			
 
 			try {
 				removeFromGeoNetwork(entity);
@@ -1092,6 +1093,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				Notification.show("Error connecting to GeoNetwork for metadata removing: " + e.getMessage(), Notification.Type.ERROR_MESSAGE);
 			}
 			super.doPostDelete(entity);
+			UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME + "/reset");
 		} catch (PublishException e) {
 			showError("Error during delete: " + e.getMessage());
 		} catch (IOException e) {
@@ -1259,14 +1261,13 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 
 				// TODO REDIRECT to home
 				// window.href.location = "http://localhost:8090/esp-client/#!Home";
-				/*
-				try {*/
-				UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME);
-				/*} catch (LazyInitializationException e) {
+				
+				try {
+					UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME + "/reset");
+				} catch (LazyInitializationException e) {
 					e.printStackTrace();
 				}
-				*/
-					
+				
 
 				try {
 					mailService.sendUploadedEmail(message, mail_to);
