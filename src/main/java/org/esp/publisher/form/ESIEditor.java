@@ -1252,30 +1252,34 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 					getEntity().setStatus(preStatus);
 					
 				}
-				String message = "New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName()
+				String message = "";
+				if(getEntity().getEcosystemService() !=null && getEntity().getIndicator()!=null && getEntity().getStudy()!=null)
+				{
+					message = "New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName()
 						+ " has been uploaded";
+					Notification.show(SAVE_MESSAGE);
 
+					// TODO REDIRECT to home
+					// window.href.location = "http://localhost:8090/esp-client/#!Home";
+					
+					try {
+						UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME + "/reset");
+					} catch (LazyInitializationException e) {
+						e.printStackTrace();
+					}
+					
+
+					try {
+						mailService.sendUploadedEmail(message, mail_to);
+					} catch (EmailException e) {
+						showError("Error sending email: " + e.getMessage());
+					} catch (IOException e) {
+						showError("Error sending email: " + e.getMessage());
+					}
+				}
 				// old receiver were hard-coded
 				// String to = "joachim.maes@jrc.ec.europa.eu";
-				Notification.show(SAVE_MESSAGE);
-
-				// TODO REDIRECT to home
-				// window.href.location = "http://localhost:8090/esp-client/#!Home";
 				
-				try {
-					UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME + "/reset");
-				} catch (LazyInitializationException e) {
-					e.printStackTrace();
-				}
-				
-
-				try {
-					mailService.sendUploadedEmail(message, mail_to);
-				} catch (EmailException e) {
-					showError("Error sending email: " + e.getMessage());
-				} catch (IOException e) {
-					showError("Error sending email: " + e.getMessage());
-				}
 
 			}
 		});
