@@ -127,6 +127,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	public static final String SAVE_MESSAGE = "Thank you for submitting the data. The data set and the metadata will be reviewed and we keep you informed about the final publication. If we have questions, we will contact you by email.";
 	public static final String THE_ECOSYSTEM_SERVICE = "The Ecosystem Service";
 	public static final String SPATIAL_DATA_TYPE = "Spatial Data Type";
+	public static final String MANDATORY_DATA = "Did you compiled all the mandatory data and provided a geospatialData?";
 	public static final String SPATIAL_DATA = "Geospatial data";
 	public static final String LAY_OUT = "Lay-out";
 	public static final String INSPIRE = "Inspire required Metadata";
@@ -1251,35 +1252,39 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				if (!commitForm(true)) {
 					getEntity().setStatus(preStatus);
 					
-				}
-				String message = "";
-				if(getEntity().getEcosystemService() !=null && getEntity().getIndicator()!=null && getEntity().getStudy()!=null)
-				{
-					message = "New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName()
-						+ " has been uploaded";
-					Notification.show(SAVE_MESSAGE);
-
-					// TODO REDIRECT to home
-					// window.href.location = "http://localhost:8090/esp-client/#!Home";
-					
-					try {
-						UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME + "/reset");
-					} catch (LazyInitializationException e) {
-						e.printStackTrace();
+				} else {
+					String message = "";
+					if(getEntity().getEcosystemService() !=null && getEntity().getIndicator()!=null && getEntity().getStudy()!=null && getEntity().getColourMap() != null)
+					{
+						message = "New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName()
+							+ " has been uploaded";
+						Notification.show(SAVE_MESSAGE);
+	
+						// TODO REDIRECT to home
+						// window.href.location = "http://localhost:8090/esp-client/#!Home";
+						
+						try {
+							UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME + "/reset");
+						} catch (LazyInitializationException e) {
+							e.printStackTrace();
+						}
+						
+	
+						try {
+							mailService.sendUploadedEmail(message, mail_to);
+						} catch (EmailException e) {
+							showError("Error sending email: " + e.getMessage());
+						} catch (IOException e) {
+							showError("Error sending email: " + e.getMessage());
+						}
 					}
-					
-
-					try {
-						mailService.sendUploadedEmail(message, mail_to);
-					} catch (EmailException e) {
-						showError("Error sending email: " + e.getMessage());
-					} catch (IOException e) {
-						showError("Error sending email: " + e.getMessage());
+					else
+					{
+						Notification.show(MANDATORY_DATA);
 					}
+					// old receiver were hard-coded
+					// String to = "joachim.maes@jrc.ec.europa.eu";
 				}
-				// old receiver were hard-coded
-				// String to = "joachim.maes@jrc.ec.europa.eu";
-				
 
 			}
 		});
