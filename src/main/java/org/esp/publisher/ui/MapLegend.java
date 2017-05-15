@@ -124,7 +124,22 @@ public class MapLegend extends CssLayout {
         }
         
         sb.append("<br/>");
-        sb.append(s.getProjectReferences());
+        if(s.getProjectReferences() != null) {
+        	sb.append(s.getProjectReferences());
+        }
+        if(s.getStudyDoi() != null && !"".equals(s.getStudyDoi())) {
+        	sb.append("<br/>");
+        	sb.append("DOI:<br/>");
+        	sb.append("<a href='");
+        	if(!s.getStudyDoi().startsWith("http")) {
+        		sb.append("https://doi.org/");
+        	}
+            sb.append(s.getStudyDoi());
+            sb.append("' target='_blank'>");
+            sb.append(s.getStudyDoi());
+            sb.append("</a>");
+            sb.append("<br/>");
+        }
 
         return sb.toString();
     }

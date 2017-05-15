@@ -37,7 +37,6 @@ public class Study {
     private Role role;
 
     @ManyToOne
-    @NotNull
     @JoinColumn(name="role_id")
     public Role getRole() {
         return role;
@@ -49,7 +48,6 @@ public class Study {
 
     private ProjectType projectType;
 
-    @NotNull
     @ManyToOne
     @JoinColumn(name = "project_type_id")
     public ProjectType getProjectType() {
@@ -62,7 +60,6 @@ public class Study {
 
     private StudyPurpose studyPurpose;
 
-    @NotNull
     @ManyToOne
     @JoinColumn(name = "study_purpose_id")
     public StudyPurpose getStudyPurpose() {
@@ -75,7 +72,6 @@ public class Study {
 
     private String keywords;
 
-    @NotNull
     @Column
     public String getKeywords() {
         return keywords;
@@ -95,6 +91,17 @@ public class Study {
 
     public void setStudyName(String studyName) {
         this.studyName = studyName;
+    }
+    
+    private String studyDoi;
+
+    @Column(name = "study_doi")
+    public String getStudyDoi() {
+        return studyDoi;
+    }
+
+    public void setStudyDoi(String studyDoi) {
+        this.studyDoi = studyDoi;
     }
 
     private String studyLocation;
@@ -133,7 +140,6 @@ public class Study {
 
     private String mainInvestigators;
 
-    @NotNull
     @Column(name = "main_investigators")
     public String getMainInvestigators() {
         return mainInvestigators;
@@ -145,7 +151,6 @@ public class Study {
 
     private String projectReferences;
 
-    @NotNull
     @Column(name = "project_references")
     public String getProjectReferences() {
         return projectReferences;

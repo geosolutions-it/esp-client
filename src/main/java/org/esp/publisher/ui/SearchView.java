@@ -345,7 +345,6 @@ public class SearchView extends TwinPanelView implements View {
 			builder.append(parseGeonetworkTemplate(entity, line, thesaurusTemplate, resourceTemplate, new double[] { bbox.getMinX(), bbox.getMaxX(), bbox.getMinY(), bbox.getMaxY() }));
 		}
 		GNClient client = new GN3Client(geonetworkUrl, geonetworkUser, geonetworkPassword);
-
 		GNInsertConfiguration cfg = new GNInsertConfiguration();
 		cfg.setCategory("datasets");
 		cfg.setGroup("1"); // group 1 is usually "all"
@@ -748,11 +747,13 @@ public class SearchView extends TwinPanelView implements View {
 	private Message getFeedbackMessage(EcosystemServiceIndicator esi) {
 		Message fbkMsg = null;
 		Set<Message> msgs = esi.getMessages();
-		for (Message msg : msgs) {
-			if (msg != null) {
-				fbkMsg = msg.getFeedback();
-				if (fbkMsg != null && msg.getAuthor().equals(this.roleManager.getRole())) {
-					break;
+		if(msgs != null) {
+			for (Message msg : msgs) {
+				if (msg != null) {
+					fbkMsg = msg.getFeedback();
+					if (fbkMsg != null && msg.getAuthor().equals(this.roleManager.getRole())) {
+						break;
+					}
 				}
 			}
 		}
@@ -765,10 +766,12 @@ public class SearchView extends TwinPanelView implements View {
 	private Message getDirectMessage(EcosystemServiceIndicator esi) {
 		Message dirMsg = null;
 		Set<Message> msgs = esi.getMessages();
-		for (Message msg : msgs) {
-			if (msg != null && msg.getFeedback() == null && msg.getParent() == null) {
-				dirMsg = msg;
-				break;
+		if(msgs != null) {
+			for (Message msg : msgs) {
+				if (msg != null && msg.getFeedback() == null && msg.getParent() == null) {
+					dirMsg = msg;
+					break;
+				}
 			}
 		}
 		return dirMsg;

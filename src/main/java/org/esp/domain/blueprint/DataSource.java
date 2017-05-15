@@ -54,7 +54,7 @@ public class DataSource {
     private Set<EcosystemServiceIndicator> ecosystemServiceIndicators;
 
     @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(name = "blueprint.indicator_data_source", joinColumns = @JoinColumn(name = "data_source_id"), inverseJoinColumns = @JoinColumn(name = "ecosystem_service_indicator_id"))
+    @JoinTable(name = "blueprint.ecosystem_service_indicator_data_source", joinColumns = @JoinColumn(name = "data_source_id"), inverseJoinColumns = @JoinColumn(name = "ecosystem_service_indicator_id"))
     public Set<EcosystemServiceIndicator> getEcosystemServiceIndicators() {
         return ecosystemServiceIndicators;
     }

@@ -24,6 +24,7 @@ public class InlineStudyEditor extends EditorController<Study> {
 
         ff.addField(Study_.studyName);
         ff.addField(Study_.url);
+        ff.addField(Study_.studyDoi).setCaption("DOI of the publication (in case the map is published in One Ecosystem)");
         ff.addField(Study_.studyPurpose);
         ff.addField(Study_.studyLocation);
         ff.addField(Study_.startYear, new YearField());
