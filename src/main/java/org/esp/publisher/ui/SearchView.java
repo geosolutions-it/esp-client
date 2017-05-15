@@ -33,6 +33,7 @@ import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.esp.domain.blueprint.Biome;
 import org.esp.domain.blueprint.EcosystemServiceIndicator;
@@ -53,6 +54,7 @@ import com.vaadin.addon.jpacontainer.EntityItem;
 import com.vaadin.addon.jpacontainer.JPAContainer;
 import com.vaadin.addon.jpacontainer.JPAContainerItem;
 import com.vaadin.data.Container.Filterable;
+import com.vaadin.data.Container.ItemSetChangeEvent;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.util.filter.And;
@@ -387,19 +389,19 @@ public class SearchView extends TwinPanelView implements View {
 				.replace("{{DATESTAMP}}", inspireDateFormat.format(entity.getDateCreated())).replace("{{DATADATE}}", inspireDateFormat.format(entity.getDateCreated()))
 				.replace("{{CRS}}", entity.getInspireCrs()).replace("{{TITLE}}", normalizeTemplateVariable(entity.getInspireTitle()))
 				.replace("{{ABSTRACT}}", normalizeTemplateVariable(entity.getInspireAbstract()))
-				.replace("{{PURPOSE}}", entity.getStudy().getStudyPurpose() != null ? entity.getStudy().getStudyPurpose().getLabel() : "")
+				.replace("{{PURPOSE}}", entity.getStudy().getStudyPurpose() != null ? StringEscapeUtils.escapeXml11(entity.getStudy().getStudyPurpose().getLabel()) : "")
 				.replace("{{CREDIT}}", normalizeTemplateVariable(entity.getStudy().getFundingSource()) + ", " + normalizeTemplateVariable(entity.getStudy().getMainInvestigators()))
 				.replace("{{DATAPOCORG}}", normalizeTemplateVariable(entity.getInspireOwnerOrganization())).replace("{{DATAPOCPOS}}", normalizeTemplateVariable(entity.getInspireOwnerName()))
 				.replace("{{DATAPOCMAIL}}", normalizeTemplateVariable(entity.getInspireOwnerEmail())).replace("{{DATAPOCSITE}}", normalizeTemplateVariable(entity.getInspireOwnerSite()))
-				.replace("{{KEYWORD}}", normalizeTemplateVariable(entity.getStudy().getKeywords())).replace("{{THESAURUSKEYWORDS}}", getThesaurusKeywords(entity, thesaurusTemplate))
-				.replace("{{TOPIC}}", entity.getInspireTopicCategory() != null ? entity.getInspireTopicCategory().getCategory() : "")
+				.replace("{{KEYWORD}}", normalizeTemplateVariable(entity.getStudy().getKeywords())).replace("{{THESAURUSKEYWORDS}}", StringEscapeUtils.escapeXml11(getThesaurusKeywords(entity, thesaurusTemplate)))
+				.replace("{{TOPIC}}", entity.getInspireTopicCategory() != null ? StringEscapeUtils.escapeXml11(entity.getInspireTopicCategory().getCategory()) : "")
 				.replace("{{CONSTRAINTS}}", normalizeTemplateVariable(entity.getInspireResourceConstraints()))
 				.replace("{{SPATIALREPRESENTATION}}", entity.getSpatialDataType().getId() == 1 ? "grid" : "vector")
 				.replace("{{TEMPORALSTART}}", entity.getInspireStartYear() != null ? inspireDateFormat.format(startYear.getTime()) : "")
 				.replace("{{TEMPORALEND}}", entity.getInspireStartYear() != null ? inspireDateFormat.format(endYear.getTime()) : "")
 				.replace("{{EXTENT}}", bbox[0] + "," + bbox[1] + "," + bbox[2] + "," + bbox[3]).replace("{{WEST}}", bbox[0] + "").replace("{{EAST}}", bbox[1] + "").replace("{{SOUTH}}", bbox[2] + "")
 				.replace("{{NORTH}}", bbox[3] + "").replace("{{SUPPLEMENTAL}}", normalizeTemplateVariable(entity.getStudy().getProjectReferences()))
-				.replace("{{LINEAGESTATEMENT}}", entity.getQuantificationMethod() != null ? entity.getQuantificationMethod().getLabel() : "")
+				.replace("{{LINEAGESTATEMENT}}", entity.getQuantificationMethod() != null ? StringEscapeUtils.escapeXml11(entity.getQuantificationMethod().getLabel()) : "")
 				.replace("{{RESOURCES}}", getResources(entity, resourceTemplate)) + "\n";
 	}
 
@@ -411,7 +413,7 @@ public class SearchView extends TwinPanelView implements View {
 		if (entity.getSpatialDataType().getId() == 1) {
 			builder.append(createResource(resourceTemplate, "FILE:RASTER", downloadUrl, "<gmx:MimeFileType xmlns:gmx=\"http://www.isotc211.org/2005/gmx\" type=\"\"/>"));
 		}
-		builder.append(createResource(resourceTemplate, "OGC:WMS-1.1.1-http-get-map", geoserverUrl, "<gco:CharacterString>" + entity.getLayerName() + "</gco:CharacterString>"));
+		builder.append(createResource(resourceTemplate, "OGC:WMS-1.1.1-http-get-map", geoserverUrl, "<gco:CharacterString>" + StringEscapeUtils.escapeXml11(entity.getLayerName()) + "</gco:CharacterString>"));
 
 		return builder.toString() + "\n";
 	}
@@ -421,7 +423,7 @@ public class SearchView extends TwinPanelView implements View {
 	}
 
 	private String normalizeTemplateVariable(String value) {
-		return value != null ? value : "";
+		return value != null ? StringEscapeUtils.escapeXml11(value): "";
 	}
 
 	private String getThesaurusKeywords(EcosystemServiceIndicator entity, String thesaurusTemplate) {
@@ -449,7 +451,7 @@ public class SearchView extends TwinPanelView implements View {
 	}
 
 	private Object createThesaurusKeyword(String template, String key, String value, Date date) {
-		return template.replace("{{THESAURUSKEYWORD}}", value).replace("{{THESAURUSNAME}}", key).replace("{{THESAURUSDATE}}", inspireDateFormat.format(date));
+		return template.replace("{{THESAURUSKEYWORD}}", StringEscapeUtils.escapeXml11(value)).replace("{{THESAURUSNAME}}", key).replace("{{THESAURUSDATE}}", inspireDateFormat.format(date));
 	}
 
 	private FilterPanel<EcosystemServiceIndicator> getFilterPanel() {
@@ -615,7 +617,8 @@ public class SearchView extends TwinPanelView implements View {
 			entitySelected(null);
 			layerManager.setSurfaceLayerName("", 0);
 			mapLegend.setValue(null);
-		} else if (selectedEntity == null) {
+		}
+		if (selectedEntity == null) {
 
 			Iterator<?> it = table.getItemIds().iterator();
 			if (it.hasNext()) {
@@ -623,6 +626,7 @@ public class SearchView extends TwinPanelView implements View {
 				EcosystemServiceIndicator obj = dao.find(EcosystemServiceIndicator.class, next);
 				selectedEntity = obj;
 				table.select(next);
+				entitySelected(selectedEntity.getId());
 			}
 
 		}
@@ -645,7 +649,7 @@ public class SearchView extends TwinPanelView implements View {
 
 			}
 		});
-
+		
 		/*
 		 * Check super user
 		 */

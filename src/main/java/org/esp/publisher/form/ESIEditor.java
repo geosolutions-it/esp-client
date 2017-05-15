@@ -30,6 +30,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -62,6 +63,7 @@ import org.esp.domain.blueprint.Indicator_;
 import org.esp.domain.blueprint.InspireTheme;
 import org.esp.domain.blueprint.InspireTheme_;
 import org.esp.domain.blueprint.MappingUnit_;
+import org.esp.domain.blueprint.Message;
 import org.esp.domain.blueprint.PublishStatus;
 import org.esp.domain.blueprint.QuantificationMethod;
 import org.esp.domain.blueprint.QuantificationMethod_;
@@ -125,6 +127,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	public static final String SAVE_MESSAGE = "Thank you for submitting the data. The data set and the metadata will be reviewed and we keep you informed about the final publication. If we have questions, we will contact you by email.";
 	public static final String THE_ECOSYSTEM_SERVICE = "The Ecosystem Service";
 	public static final String SPATIAL_DATA_TYPE = "Spatial Data Type";
+	public static final String MANDATORY_DATA = "Did you compiled all the mandatory data and provided a geospatialData?";
 	public static final String SPATIAL_DATA = "Geospatial data";
 	public static final String LAY_OUT = "Lay-out";
 	public static final String INSPIRE = "Inspire required Metadata";
@@ -368,7 +371,6 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 		inspireLineage = ff.addTextField(EcosystemServiceIndicator_.inspireLineage);
 		inspireLineage.setCaption("Lineage/Quality Info");
 		ff.addField(EcosystemServiceIndicator_.inspireTheme, InspireTheme_.theme).setCaption("Theme");
-		;
 		inspireCrs = ff.addTextField(EcosystemServiceIndicator_.inspireCrs);
 		inspireCrs.setCaption("Reference System");
 		ff.addField(EcosystemServiceIndicator_.inspireOwnerName).setCaption("Point of contact: Owner Name");
@@ -511,7 +513,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	protected void doPreCommit(EcosystemServiceIndicator entity) {
 		entity.setRole(roleManager.getRole());
 		entity.setDateUpdated(Calendar.getInstance().getTime());
-
+		entity.setMessages(new HashSet<Message>());
 		stylerFieldGroup.preCommit(entity);
 
 	}
@@ -1077,7 +1079,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 	protected void doPostDelete(EcosystemServiceIndicator entity) {
 		try {
 			unpublishEntity(entity);
-			UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME);
+			
 
 			try {
 				removeFromGeoNetwork(entity);
@@ -1092,6 +1094,7 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				Notification.show("Error connecting to GeoNetwork for metadata removing: " + e.getMessage(), Notification.Type.ERROR_MESSAGE);
 			}
 			super.doPostDelete(entity);
+			UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME + "/reset");
 		} catch (PublishException e) {
 			showError("Error during delete: " + e.getMessage());
 		} catch (IOException e) {
@@ -1249,31 +1252,38 @@ public class ESIEditor extends EditorController<EcosystemServiceIndicator> {
 				if (!commitForm(true)) {
 					getEntity().setStatus(preStatus);
 					
-				}
-				String message = "New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName()
-						+ " has been uploaded";
-
-				// old receiver were hard-coded
-				// String to = "joachim.maes@jrc.ec.europa.eu";
-				Notification.show(SAVE_MESSAGE);
-
-				// TODO REDIRECT to home
-				// window.href.location = "http://localhost:8090/esp-client/#!Home";
-				/*
-				try {*/
-				UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME);
-				/*} catch (LazyInitializationException e) {
-					e.printStackTrace();
-				}
-				*/
-					
-
-				try {
-					mailService.sendUploadedEmail(message, mail_to);
-				} catch (EmailException e) {
-					showError("Error sending email: " + e.getMessage());
-				} catch (IOException e) {
-					showError("Error sending email: " + e.getMessage());
+				} else {
+					String message = "";
+					if(getEntity().getEcosystemService() !=null && getEntity().getIndicator()!=null && getEntity().getStudy()!=null && getEntity().getColourMap() != null)
+					{
+						message = "New Map " + getEntity().getEcosystemService().getDescription() + " - " + getEntity().getIndicator().getLabel() + " - " + getEntity().getStudy().getStudyName()
+							+ " has been uploaded";
+						Notification.show(SAVE_MESSAGE);
+	
+						// TODO REDIRECT to home
+						// window.href.location = "http://localhost:8090/esp-client/#!Home";
+						
+						try {
+							UI.getCurrent().getNavigator().navigateTo(ViewModule.HOME + "/reset");
+						} catch (LazyInitializationException e) {
+							e.printStackTrace();
+						}
+						
+	
+						try {
+							mailService.sendUploadedEmail(message, mail_to);
+						} catch (EmailException e) {
+							showError("Error sending email: " + e.getMessage());
+						} catch (IOException e) {
+							showError("Error sending email: " + e.getMessage());
+						}
+					}
+					else
+					{
+						Notification.show(MANDATORY_DATA);
+					}
+					// old receiver were hard-coded
+					// String to = "joachim.maes@jrc.ec.europa.eu";
 				}
 
 			}

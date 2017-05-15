@@ -107,6 +107,7 @@ public class EditableCombo<T> extends EditableField<T> {
 		        }else{
 		            populateCombo();
 		        }
+				UI.getCurrent().removeWindow(w);
 			}
         	
 		});
