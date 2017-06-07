@@ -136,7 +136,7 @@ public class MapLegend extends CssLayout {
         	}
             sb.append(s.getStudyDoi());
             sb.append("' target='_blank'>");
-            sb.append(s.getStudyDoi());
+            sb.append("One Ecosystem");
             sb.append("</a>");
             sb.append("<br/>");
         }
